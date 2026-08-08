@@ -74,10 +74,10 @@
     "screen_width": 1920,
     "screen_height": 1080,
     "game_rect": {
-      "x": 317,
-      "y": 172,
-      "width": 1194,
-      "height": 722
+      "x": 321,
+      "y": 166,
+      "width": 1207,
+      "height": 702
     },
     "top_vote_count": 5,
     "recent_count": 7,
@@ -95,60 +95,51 @@
       "width": 390,
       "vote_height": 390,
       "chat_y": 560,
-      "chat_height": 300,
-      "trainer_y": 870,
-      "trainer_height": 80
+      "chat_height": 305
     },
     "status": {
       "location": "Pallet Town",
       "badges": 2,
       "party_size": 3,
       "deaths": 3,
-      "objective": "Defeat Brock\nin Pewter City",
-      "gym_badges_earned": 2
+      "objective": "Defeat Brock\nin Pewter City"
     },
     "status_layout": {
       "location": {
-        "x": 18,
-        "y": 824,
-        "width": 280,
-        "height": 126
+        "x": 12,
+        "y": 868,
+        "width": 294,
+        "height": 128
       },
       "badges": {
-        "x": 300,
-        "y": 824,
-        "width": 390,
-        "height": 126
+        "x": 320,
+        "y": 868,
+        "width": 662,
+        "height": 128
       },
       "party": {
-        "x": 692,
-        "y": 824,
-        "width": 315,
-        "height": 126
+        "x": 996,
+        "y": 868,
+        "width": 304,
+        "height": 128
       },
       "deaths": {
-        "x": 1009,
-        "y": 824,
-        "width": 170,
-        "height": 126
+        "x": 1314,
+        "y": 868,
+        "width": 136,
+        "height": 128
       },
       "objective": {
-        "x": 1181,
-        "y": 824,
-        "width": 330,
-        "height": 126
-      },
-      "trainer_status": {
-        "x": 1530,
-        "y": 870,
-        "width": 390,
-        "height": 80
+        "x": 1464,
+        "y": 868,
+        "width": 444,
+        "height": 128
       },
       "footer": {
-        "x": 18,
-        "y": 960,
-        "width": 1890,
-        "height": 70
+        "x": 6,
+        "y": 1014,
+        "width": 1846,
+        "height": 62
       }
     },
     "fit_scale": 1.0546875,

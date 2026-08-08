@@ -133,6 +133,12 @@ class Overlay(QWidget):
         f.setStyleHint(QFont.SansSerif)
         return f
 
+    def screen_font(self, size, bold=False):
+        f = QFont(self.font_family, max(1, int(round(size))))
+        f.setBold(bold)
+        f.setStyleHint(QFont.SansSerif)
+        return f
+
     def text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
         p.setFont(self.font(size, bold))
         p.setPen(color)
@@ -147,10 +153,24 @@ class Overlay(QWidget):
         p.drawPixmap(target, pix, source)
         return True
 
+    def screen_sprite(self, p, name, x, y, w, h):
+        pix = self.hud.get(name)
+        if not pix:
+            return False
+        target = QRectF(float(x), float(y), float(w), float(h))
+        source = QRectF(0, 0, pix.width(), pix.height())
+        p.drawPixmap(target, pix, source)
+        return True
+
     def screen_text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
-        p.setFont(self.font(size, bold))
+        p.setFont(self.screen_font(size, bold))
         p.setPen(color)
         p.drawText(QRectF(float(x), float(y), float(w), float(h)), align, str(t))
+
+    def screen_text_size(self, p, t, size=12, bold=False):
+        p.setFont(self.screen_font(size, bold))
+        metrics = p.fontMetrics()
+        return metrics.horizontalAdvance(str(t)), metrics.height()
 
     def rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
         p.setPen(QPen(border, max(1, bw * self.avg_scale())))
@@ -183,15 +203,15 @@ class Overlay(QWidget):
 
         # Current Round body (below header)
         p.setBrush(CREAM2)
-        p.drawRect(QRectF(self.tx(1327), self.ty(183), self.tw(324), self.th(319)))
+        p.drawRect(QRectF(1549, 219, 358, 356))
 
         # Live Chat body
         p.setBrush(DARK)
-        p.drawRect(QRectF(self.tx(1327), self.ty(537), self.tw(318), self.th(266)))
+        p.drawRect(QRectF(1548, 637, 330, 226))
 
         # Footer strip
         p.setBrush(FOOTER)
-        p.drawRect(QRectF(self.tx(6), self.ty(904), self.tw(1608), self.th(31)))
+        p.drawRect(QRectF(6, 1014, 1846, 31))
 
     def draw_votes(self, p):
         rows = self.state.get("votes", [])[:5]
@@ -263,50 +283,78 @@ class Overlay(QWidget):
         top_lvl = top[0]["level"] if top else 38
         total_trainers = int(self.state.get("unique_players", 1248))
         longest_streak = int(self.state.get("longest_streak", 27))
-        gym_badges = int(st.get("gym_badges_earned", 2))
-
-        self.text(p, f"TOP TRAINER: {top_name} (Lv. {top_lvl})", 18, 909, 350, 22, 8, WHITE, True)
-        self.text(p, f"LONGEST STREAK: {longest_streak}", 390, 909, 240, 22, 8, WHITE, True)
-        self.text(p, f"TOTAL TRAINERS: {total_trainers:,}", 680, 909, 265, 22, 8, WHITE, True)
-        self.text(p, f"GYM BADGES EARNED: {gym_badges}", 1040, 909, 310, 22, 8, WHITE, True)
-        self.text(p, "!trainer for your card", 1418, 909, 180, 22, 8, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
+        self.screen_text(p, f"TOP TRAINER: {top_name} (Lv. {top_lvl})", 30, 1016, 430, 28, 18, WHITE, True)
+        self.screen_text(p, f"LONGEST STREAK: {longest_streak}", 485, 1016, 285, 28, 18, WHITE, True)
+        self.screen_text(p, f"TOTAL TRAINERS: {total_trainers:,}", 795, 1016, 330, 28, 18, WHITE, True)
+        self.screen_text(p, "!trainer for your card", 1585, 1016, 300, 28, 18, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
 
     def draw_location_panel(self, p, loc):
-        slug = str(loc).strip().lower().replace(" ", "_")
-        if self.sprite(p, f"bottom_location_{slug}", 6, 817, 265, 74):
-            return
-        self.sprite(p, "bottom_location_pallet_town", 6, 817, 265, 74)
-        p.setPen(Qt.NoPen)
-        p.setBrush(CREAM2)
-        p.drawRect(QRectF(self.tx(52), self.ty(835), self.tw(196), self.th(43)))
-        self.text(p, loc, 54, 835, 190, 45, 13, INK, True)
+        body = (22, 916, 296, 986)
+        icon_w, icon_h = 72, 72
+        text = str(loc)
+        font_size = 30
+        text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        gap = 20
+        group_w = icon_w + gap + text_w
+        x = body[0] + (body[2] - body[0] - group_w) / 2
+        cy = body[1] + (body[3] - body[1]) / 2
+        self.screen_sprite(p, "location_house", x, cy - icon_h / 2, icon_w, icon_h)
+        self.screen_text(p, text, x + icon_w + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_badges_panel(self, p, badges):
-        count = max(0, min(6, int(badges)))
-        if not self.sprite(p, f"bottom_badges_count_{count}", 275, 817, 338, 74):
-            self.sprite(p, "bottom_badges_count_2", 275, 817, 338, 74)
+        count = max(0, min(8, int(badges)))
+        body = (330, 916, 972, 986)
+        size = 52
+        gap = 18
+        group_w = 8 * size + 7 * gap
+        x0 = body[0] + (body[2] - body[0] - group_w) / 2
+        y0 = body[1] + (body[3] - body[1] - size) / 2
+        for i in range(8):
+            name = f"badge_{i}" if i < count else f"badge_{i}_locked"
+            if not self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size):
+                self.screen_sprite(p, f"badge_{i}", x0 + i * (size + gap), y0, size, size)
 
     def draw_party_panel(self, p, party):
         count = max(0, min(6, int(party)))
-        if not self.sprite(p, f"bottom_party_count_{count}", 617, 817, 308, 74):
-            self.sprite(p, "bottom_party_count_3", 617, 817, 308, 74)
+        body = (1006, 916, 1290, 986)
+        size = 48
+        gap = -3
+        group_w = 6 * size + 5 * gap
+        x0 = body[0] + (body[2] - body[0] - group_w) / 2
+        y0 = body[1] + (body[3] - body[1] - size) / 2
+        for i in range(6):
+            name = "party_pokeball" if i < count else "party_empty"
+            self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size)
 
     def draw_deaths_panel(self, p, deaths):
-        self.sprite(p, "bottom_deaths", 929, 817, 126, 74)
-        if int(deaths) != 3:
-            p.setPen(Qt.NoPen)
-            p.setBrush(CREAM2)
-            p.drawRect(QRectF(self.tx(987), self.ty(833), self.tw(44), self.th(46)))
-            self.text(p, deaths, 990, 836, 40, 40, 18, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
+        body = (1324, 916, 1440, 986)
+        text = str(deaths)
+        font_size = 30
+        text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        skull_size = 48
+        gap = 14
+        group_w = skull_size + gap + text_w
+        x = body[0] + (body[2] - body[0] - group_w) / 2
+        cy = body[1] + (body[3] - body[1]) / 2
+        self.screen_sprite(p, "skull_reference", x, cy - skull_size / 2, skull_size, skull_size)
+        self.screen_text(p, text, x + skull_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_objective_panel(self, p, objective):
-        self.sprite(p, "bottom_objective_defeat_brock", 1061, 817, 252, 74)
-        default_objective = OV.get("status", {}).get("objective", "Defeat Brock\nin Pewter City")
-        if str(objective) != str(default_objective):
-            p.setPen(Qt.NoPen)
-            p.setBrush(CREAM2)
-            p.drawRect(QRectF(self.tx(1115), self.ty(829), self.tw(172), self.th(52)))
-            self.text(p, objective, 1120, 830, 170, 48, 11, INK, True)
+        body = (1474, 916, 1898, 986)
+        text = str(objective)
+        font_size = 24
+        lines = text.splitlines() or [text]
+        widths = [self.screen_text_size(p, line, font_size, True)[0] for line in lines]
+        _, line_h = self.screen_text_size(p, "Ag", font_size, True)
+        text_w = max(widths) if widths else 0
+        text_h = len(lines) * line_h
+        icon_size = 50
+        gap = 20
+        group_w = icon_size + gap + text_w
+        x = body[0] + (body[2] - body[0] - group_w) / 2
+        cy = body[1] + (body[3] - body[1]) / 2
+        self.screen_sprite(p, "objective_flag", x, cy - icon_size / 2, icon_size, icon_size)
+        self.screen_text(p, text, x + icon_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_active_effects(self, p):
         effects = self.state.get("active_effects", [])
@@ -409,7 +457,12 @@ class Overlay(QWidget):
         self.draw_dialogue(p)
         self.draw_boot(p)
 
-app = QApplication(sys.argv)
-w = Overlay()
-w.show()
-sys.exit(app.exec_())
+def main():
+    app = QApplication(sys.argv)
+    w = Overlay()
+    w.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()

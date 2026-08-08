@@ -7,3 +7,4 @@ boot_state.json
 dialogue_state.json
 __pycache__/
 *.pyc
+assets/ui/mockups/

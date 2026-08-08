@@ -4,14 +4,14 @@ This version implements the latest approved overlay art into the project.
 
 ## Key changes
 - Uses the latest approved Charizard / title / Pikachu banner.
-- True **1920×1080** overlay frame.
+- True **1920x1080** overlay frame.
 - The **game window is genuinely transparent** so OBS can place mGBA under it.
 - No permanent Professor Oak / NPC dialogue box.
 - No permanent Trainer Status box.
 - Current Round, Live Chat, bottom HUD, and footer are aligned to the approved image.
 
 ## OBS setup
-Use a 1920×1080 base canvas.
+Use a 1920x1080 base canvas.
 
 Recommended source order:
 1. Twitch Plays Pokemon Overlay
@@ -40,13 +40,14 @@ If chat commands appear in the overlay but the game does not move, check these f
 - Make sure `input.mgba_window_name` matches the emulator window title, usually `mGBA`.
 
 ## HUD images
-The bottom Location, Badges, Party, Deaths, and Objective bodies are image-backed so they match the approved mockup. Runtime sprites live in `assets/ui/hud/`.
+The bottom Location, Badges, Party, Deaths, and Objective panels are drawn into `assets/ui/overlay_frame.png`, then `overlay_app.py` paints the centered live values on top. Runtime sprites live in `assets/ui/hud/`.
+`assets/ui/overlay_frame_source.png` is the preserved approved frame; `assets/ui/reference/` stores the badge and skull source references. `tools/build_overlay_assets.py` regenerates the cleaned frame and HUD sprites from those repo-local files.
 
-For a new location, add a 265×74 PNG named like:
+Badge icons are stored as `badge_0.png` through `badge_7.png`. Unearned badges use the matching dimmed sprites, `badge_0_locked.png` through `badge_7_locked.png`.
 
-    assets/ui/hud/bottom_location_viridian_city.png
+To rebuild the polished frame and sprite set:
 
-The filename should be the lowercase location with spaces changed to underscores.
+    python tools/build_overlay_assets.py
 
 ## Token
 Create or edit `secrets.env` locally:
