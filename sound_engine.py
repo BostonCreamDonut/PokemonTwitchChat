@@ -14,8 +14,11 @@ class SoundEngine:
         if not path.exists():
             return
         # aplay is lightweight and standard on Raspberry Pi OS/ALSA setups.
-        subprocess.Popen(
-            ["aplay", "-q", str(path)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        try:
+            subprocess.Popen(
+                ["aplay", "-q", str(path)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        except OSError:
+            return

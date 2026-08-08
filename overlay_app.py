@@ -2,7 +2,7 @@
 import json, math, sys, time
 from pathlib import Path
 from PyQt5.QtCore import Qt, QTimer, QRectF, QPointF
-from PyQt5.QtGui import QColor, QFont, QPainter, QPen, QBrush, QPixmap
+from PyQt5.QtGui import QColor, QFont, QFontDatabase, QPainter, QPen, QBrush, QPixmap, QPolygonF
 from PyQt5.QtWidgets import QApplication, QWidget
 
 BASE = Path(__file__).resolve().parent
@@ -17,9 +17,6 @@ FRAME = BASE / OV["reference_frame"]
 
 SRC_W = float(OV.get("source_width", 1672))
 SRC_H = float(OV.get("source_height", 941))
-SX = float(OV.get("scale_x", 1.0))
-SY = float(OV.get("scale_y", 1.0))
-
 CREAM = QColor("#F4E8CD")
 CREAM2 = QColor("#F8EFD9")
 INK = QColor("#171819")
@@ -53,21 +50,41 @@ class Overlay(QWidget):
         self.dialogue_start = 0
         self.boot = None
         self.frame = QPixmap(str(FRAME))
+        if self.frame.isNull():
+            raise SystemExit(f"Overlay frame not found or unreadable: {FRAME}")
+
+        self.screen_w = int(OV.get("screen_width", self.frame.width()))
+        self.screen_h = int(OV.get("screen_height", self.frame.height()))
+        if self.frame.width() != self.screen_w or self.frame.height() != self.screen_h:
+            self.frame = self.frame.scaled(self.screen_w, self.screen_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        self.sx = self.screen_w / SRC_W
+        self.sy = self.screen_h / SRC_H
+        self.font_family = self.pick_font()
 
         self.setWindowTitle("Twitch Plays Pokemon Overlay")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self.resize(int(OV.get("screen_width", 1920)), int(OV.get("screen_height", 1080)))
+        self.resize(self.screen_w, self.screen_h)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.timer.start(max(20, int(1000 / int(OV.get("refresh_hz", 30)))))
 
-    def tx(self, x): return x * SX
-    def ty(self, y): return y * SY
-    def tw(self, w): return w * SX
-    def th(self, h): return h * SY
+    def tx(self, x): return x * self.sx
+    def ty(self, y): return y * self.sy
+    def tw(self, w): return w * self.sx
+    def th(self, h): return h * self.sy
+
+    def avg_scale(self):
+        return (self.sx + self.sy) / 2
+
+    def pick_font(self):
+        available = set(QFontDatabase().families())
+        for name in ("DejaVu Sans Condensed", "Arial Narrow", "Arial", "Liberation Sans"):
+            if name in available:
+                return name
+        return QApplication.font().family()
 
     def read_json(self, path):
         try:
@@ -99,8 +116,9 @@ class Overlay(QWidget):
         self.update()
 
     def font(self, size, bold=False):
-        f = QFont("DejaVu Sans Condensed", max(1, int(round(size * ((SX + SY) / 2)))))
+        f = QFont(self.font_family, max(1, int(round(size * self.avg_scale()))))
         f.setBold(bold)
+        f.setStyleHint(QFont.SansSerif)
         return f
 
     def text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
@@ -108,10 +126,15 @@ class Overlay(QWidget):
         p.setPen(color)
         p.drawText(QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h)), align, str(t))
 
+    def screen_text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
+        p.setFont(self.font(size, bold))
+        p.setPen(color)
+        p.drawText(QRectF(float(x), float(y), float(w), float(h)), align, str(t))
+
     def rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
-        p.setPen(QPen(border, max(1, bw * ((SX + SY) / 2))))
+        p.setPen(QPen(border, max(1, bw * self.avg_scale())))
         p.setBrush(QBrush(fill))
-        p.drawRoundedRect(QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h)), r * SX, r * SY)
+        p.drawRoundedRect(QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h)), r * self.sx, r * self.sy)
 
     def ellipse(self, p, cx, cy, rx, ry=None, pen=None, brush=None):
         if ry is None:
@@ -123,7 +146,7 @@ class Overlay(QWidget):
         p.drawEllipse(QPointF(self.tx(cx), self.ty(cy)), self.tw(rx), self.th(ry))
 
     def pokeball(self, p, cx, cy, r):
-        penw = max(1, int(round(r * 0.08 * ((SX + SY) / 2))))
+        penw = max(1, int(round(r * 0.08 * self.avg_scale())))
         p.setPen(QPen(QColor("#111"), penw))
         p.setBrush(RED)
         self.ellipse(p, cx, cy, r)
@@ -216,7 +239,7 @@ class Overlay(QWidget):
         objective = self.state.get("objective", st.get("objective", "Defeat Brock\nin Pewter City"))
 
         # Location
-        self.text(p, "🏠", 18, 840, 36, 40, 16, WHITE, False, Qt.AlignCenter)
+        self.draw_home_icon(p, 34, 856)
         self.text(p, loc, 54, 835, 190, 45, 13, INK, True)
 
         # Badges
@@ -230,7 +253,7 @@ class Overlay(QWidget):
             else:
                 fill = QColor("#5B4633")
                 outline = QColor("#463628")
-            p.setPen(QPen(outline, max(1, int(round(2 * ((SX + SY) / 2))))))
+            p.setPen(QPen(outline, max(1, int(round(2 * self.avg_scale())))))
             p.setBrush(fill)
             self.ellipse(p, bx, 853, 15)
 
@@ -240,16 +263,16 @@ class Overlay(QWidget):
             if i < party:
                 self.pokeball(p, cx, 853, 14)
             else:
-                p.setPen(QPen(QColor("#423B32"), max(1, int(round(2 * ((SX + SY) / 2))))))
+                p.setPen(QPen(QColor("#423B32"), max(1, int(round(2 * self.avg_scale())))))
                 p.setBrush(QColor("#3D2E21"))
                 self.ellipse(p, cx, 853, 14)
 
         # Deaths
-        self.text(p, "☠", 950, 838, 32, 38, 16, INK, True, Qt.AlignCenter)
+        self.draw_skull_icon(p, 966, 856)
         self.text(p, deaths, 990, 836, 40, 40, 18, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
 
         # Objective
-        self.text(p, "⚑", 1080, 835, 34, 40, 18, RED, True, Qt.AlignCenter)
+        self.draw_flag_icon(p, 1098, 856)
         self.text(p, objective, 1120, 830, 170, 48, 11, INK, True)
 
         # Footer
@@ -260,16 +283,52 @@ class Overlay(QWidget):
         longest_streak = int(self.state.get("longest_streak", 27))
         gym_badges = int(st.get("gym_badges_earned", 2))
 
-        self.text(p, f"🏆 TOP TRAINER: {top_name} (Lv. {top_lvl})", 18, 909, 350, 22, 8, WHITE, True)
-        self.text(p, f"🔥 LONGEST STREAK: {longest_streak}", 390, 909, 240, 22, 8, WHITE, True)
-        self.text(p, f"⭐ TOTAL TRAINERS: {total_trainers:,}", 680, 909, 265, 22, 8, WHITE, True)
-        self.text(p, f"🔮 GYM BADGES EARNED: {gym_badges}", 1040, 909, 310, 22, 8, WHITE, True)
+        self.text(p, f"TOP TRAINER: {top_name} (Lv. {top_lvl})", 18, 909, 350, 22, 8, WHITE, True)
+        self.text(p, f"LONGEST STREAK: {longest_streak}", 390, 909, 240, 22, 8, WHITE, True)
+        self.text(p, f"TOTAL TRAINERS: {total_trainers:,}", 680, 909, 265, 22, 8, WHITE, True)
+        self.text(p, f"GYM BADGES EARNED: {gym_badges}", 1040, 909, 310, 22, 8, WHITE, True)
         self.text(p, "!trainer for your card", 1418, 909, 180, 22, 8, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
+
+    def draw_home_icon(self, p, cx, cy):
+        p.setPen(QPen(QColor("#5E4934"), max(1, int(round(2 * self.avg_scale())))))
+        p.setBrush(QBrush(QColor("#5BAA4A")))
+        p.drawRect(QRectF(self.tx(cx - 12), self.ty(cy - 2), self.tw(24), self.th(16)))
+        p.setBrush(QBrush(RED))
+        roof = QPolygonF([
+            QPointF(self.tx(cx - 16), self.ty(cy - 2)),
+            QPointF(self.tx(cx), self.ty(cy - 17)),
+            QPointF(self.tx(cx + 16), self.ty(cy - 2)),
+        ])
+        p.drawPolygon(roof)
+        p.setBrush(QBrush(CREAM2))
+        p.drawRect(QRectF(self.tx(cx - 4), self.ty(cy + 4), self.tw(8), self.th(10)))
+
+    def draw_skull_icon(self, p, cx, cy):
+        p.setPen(QPen(INK, max(1, int(round(2 * self.avg_scale())))))
+        p.setBrush(QBrush(WHITE))
+        self.ellipse(p, cx, cy - 4, 13, 12)
+        p.drawRect(QRectF(self.tx(cx - 8), self.ty(cy + 4), self.tw(16), self.th(10)))
+        p.setBrush(QBrush(INK))
+        self.ellipse(p, cx - 5, cy - 5, 2.4)
+        self.ellipse(p, cx + 5, cy - 5, 2.4)
+        p.drawRect(QRectF(self.tx(cx - 1.5), self.ty(cy), self.tw(3), self.th(4)))
+
+    def draw_flag_icon(self, p, cx, cy):
+        p.setPen(QPen(INK, max(1, int(round(2 * self.avg_scale())))))
+        p.drawLine(QPointF(self.tx(cx - 9), self.ty(cy - 18)), QPointF(self.tx(cx - 9), self.ty(cy + 16)))
+        p.setBrush(QBrush(RED))
+        flag = QPolygonF([
+            QPointF(self.tx(cx - 8), self.ty(cy - 17)),
+            QPointF(self.tx(cx + 14), self.ty(cy - 10)),
+            QPointF(self.tx(cx - 8), self.ty(cy - 3)),
+        ])
+        p.drawPolygon(flag)
 
     def draw_active_effects(self, p):
         effects = self.state.get("active_effects", [])
         if not effects:
             return
+        self.draw_effect_timer(p, effects[0])
         x, y, w = 280, 585, 205
         h = min(125, 42 + 40 * len(effects[:2]))
         self.rounded(p, x, y, w, h, QColor("#111516", 238), RED, 6, 2)
@@ -280,6 +339,25 @@ class Overlay(QWidget):
             self.text(p, ef.get("effect", "").replace("_", " ").upper(), x + 34, yy, w - 44, 16, 8, WHITE, True)
             self.text(p, f"{float(ef.get('remaining', 0)):.0f}s", x + 34, yy + 15, 50, 14, 8, CREAM, True)
             yy += 38
+
+    def draw_effect_timer(self, p, effect):
+        label = effect.get("effect", "").replace("_", " ").upper() or "ACTIVE EFFECT"
+        remaining = max(0, float(effect.get("remaining", 0)))
+        self.rounded(p, 1150, 155, 168, 58, QColor("#111516", 240), ORANGE, 4, 2)
+        bolt = QPolygonF([
+            QPointF(self.tx(1168), self.ty(164)),
+            QPointF(self.tx(1156), self.ty(186)),
+            QPointF(self.tx(1167), self.ty(184)),
+            QPointF(self.tx(1160), self.ty(205)),
+            QPointF(self.tx(1182), self.ty(176)),
+            QPointF(self.tx(1170), self.ty(178)),
+        ])
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(GOLD))
+        p.drawPolygon(bolt)
+        self.text(p, label, 1190, 164, 104, 19, 8, WHITE, True, Qt.AlignCenter)
+        self.text(p, f"{remaining:04.1f}s" if remaining < 10 else f"{remaining:05.1f}s",
+                  1190, 184, 104, 20, 11, WHITE, True, Qt.AlignCenter)
 
     def draw_alert(self, p):
         if not self.event:
@@ -311,9 +389,9 @@ class Overlay(QWidget):
         self.text(p, self.event.get("subtitle", ""), x + 104, y + 36, w - 118, 30, 9, QColor(25, 25, 25, alpha), True)
         extra = self.event.get("extra", {})
         if kind == "subscriber":
-            kicker = "Votes now count ×2!"
+            kicker = "Votes now count x2!"
         elif extra.get("effect"):
-            kicker = "WORLD EVENT • " + extra["effect"].replace("_", " ").upper()
+            kicker = "WORLD EVENT - " + extra["effect"].replace("_", " ").upper()
         else:
             kicker = "TRAINER EVENT"
         self.text(p, kicker, x + 104, y + 72, w - 118, 18, 9, title, True)
@@ -329,9 +407,9 @@ class Overlay(QWidget):
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(9, 12, 13, 235))
         p.drawRoundedRect(QRectF(g["x"], g["y"], g["width"], g["height"]), 7, 7)
-        self.text(p, "TWITCH PLAYS POKÉMON", g["x"] / SX, g["y"] / SY + 200, g["width"] / SX, 44, 22, CREAM, True, Qt.AlignCenter)
-        self.text(p, self.boot.get("step", ""), g["x"] / SX, g["y"] / SY + 260, g["width"] / SX, 28, 14, GOLD, True, Qt.AlignCenter)
-        self.text(p, self.boot.get("detail", ""), g["x"] / SX, g["y"] / SY + 300, g["width"] / SX, 22, 9, MUTED, False, Qt.AlignCenter)
+        self.screen_text(p, "TWITCH PLAYS POKEMON", g["x"], g["y"] + 230, g["width"], 52, 22, CREAM, True, Qt.AlignCenter)
+        self.screen_text(p, self.boot.get("step", ""), g["x"], g["y"] + 300, g["width"], 34, 14, GOLD, True, Qt.AlignCenter)
+        self.screen_text(p, self.boot.get("detail", ""), g["x"], g["y"] + 340, g["width"], 26, 9, MUTED, False, Qt.AlignCenter)
 
     def paintEvent(self, _):
         p = QPainter(self)

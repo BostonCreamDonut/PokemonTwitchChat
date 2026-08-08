@@ -1,4 +1,9 @@
 logs/*
 saves/*
+data/*
+overlay_state.json
+overlay_event.json
+boot_state.json
+dialogue_state.json
 __pycache__/
 *.pyc

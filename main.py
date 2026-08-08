@@ -12,6 +12,8 @@ from event_engine import EventEngine
 
 BASE=Path(__file__).resolve().parent
 CFG=json.loads((BASE/"config.json").read_text(encoding="utf-8"))
+for runtime_dir in ("data", "logs", "saves"):
+    (BASE / runtime_dir).mkdir(exist_ok=True)
 STOP=threading.Event()
 logging.basicConfig(
     level=logging.INFO,
@@ -123,7 +125,7 @@ class App:
         if msgid in ("sub","resub"):
             months=tags.get("msg-param-cumulative-months","1")
             self.events.alert("subscriber","NEW TRAINER JOINED!",
-                              f"{name} subscribed • {months} month(s) • votes count ×2",
+                              f"{name} subscribed - {months} month(s) - votes count x2",
                               {"months":months},4.0,"subscriber.wav")
             self.db.record_event(name)
         elif msgid in ("subgift","anonsubgift"):
@@ -167,13 +169,13 @@ class App:
             if card:
                 self.events.alert("trainer_card",
                     f"TRAINER Lv. {card['level']}",
-                    f"{user} • {card['votes_cast']:,} votes • {card['events_triggered']} events",
+                    f"{user} - {card['votes_cast']:,} votes - {card['events_triggered']} events",
                     card,6.0,None)
             return
         if low=="!toptrainers":
             top=self.db.top(3)
             if top:
-                subtitle=" • ".join(f"{i+1}. {t['username']} Lv{t['level']}" for i,t in enumerate(top))
+                subtitle=" - ".join(f"{i+1}. {t['username']} Lv{t['level']}" for i,t in enumerate(top))
                 self.events.alert("leaderboard","TOP TRAINERS",subtitle,{"trainers":top},6.0,None)
             return
 
@@ -255,7 +257,7 @@ class App:
                     completed=self.gym
                     self.gym=None
                     self.events.alert("gym_win","CHALLENGE CLEARED!",
-                                      f"{completed['name']} • Reward: {completed['reward']}",
+                                      f"{completed['name']} - Reward: {completed['reward']}",
                                       {"challenge":completed["name"]},5.0,"gym_win.wav")
                     self.activate_effect(completed["reward_effect"],completed["reward_seconds"])
                     self.next_gym_at=now+ss["gym_challenge_interval_minutes"]*60
@@ -320,7 +322,8 @@ class App:
     def run(self):
         ok,data=TokenValidator(self.token,CFG["twitch"]["bot_username"]).validate()
         if not ok:raise SystemExit(f"Token validation failed: {data}")
-        self.overlay_proc=subprocess.Popen([sys.executable,str(BASE/"overlay_app.py")],cwd=BASE)
+        if CFG["overlay"].get("enabled", True):
+            self.overlay_proc=subprocess.Popen([sys.executable,str(BASE/"overlay_app.py")],cwd=BASE)
         threading.Thread(target=self.state_writer,daemon=True).start()
         threading.Thread(target=self.round_worker,daemon=True).start()
         threading.Thread(target=self.gym_worker,daemon=True).start()

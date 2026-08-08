@@ -19,7 +19,27 @@ Recommended source order:
 
 The mGBA source should be placed underneath the overlay so it shows through the transparent game opening.
 
+## Raspberry Pi run order
+On the Pi, pull the repo and run:
+
+    chmod +x setup.sh run.sh
+    ./setup.sh
+
+Create `secrets.env` from the example and add the Twitch OAuth token for the bot account:
+
+    cp secrets.env.example secrets.env
+    nano secrets.env
+
+Then start mGBA, load the Pokemon ROM/save, and run:
+
+    ./run.sh
+
+If chat commands appear in the overlay but the game does not move, check these first:
+- Raspberry Pi OS should be using an X11 desktop session. `xdotool` usually will not control mGBA under Wayland.
+- If you want the bot to focus mGBA before every keypress, set `input.activate_mgba` to `true` in `config.json`.
+- Make sure `input.mgba_window_name` matches the emulator window title, usually `mGBA`.
+
 ## Token
-Edit `secrets.env` directly:
+Create or edit `secrets.env` locally:
 
     TWITCH_ACCESS_TOKEN=your_token_here
