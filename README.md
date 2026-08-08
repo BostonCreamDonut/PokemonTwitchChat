@@ -39,6 +39,15 @@ If chat commands appear in the overlay but the game does not move, check these f
 - If you want the bot to focus mGBA before every keypress, set `input.activate_mgba` to `true` in `config.json`.
 - Make sure `input.mgba_window_name` matches the emulator window title, usually `mGBA`.
 
+## HUD images
+The bottom Location, Badges, Party, Deaths, and Objective bodies are image-backed so they match the approved mockup. Runtime sprites live in `assets/ui/hud/`.
+
+For a new location, add a 265×74 PNG named like:
+
+    assets/ui/hud/bottom_location_viridian_city.png
+
+The filename should be the lowercase location with spaces changed to underscores.
+
 ## Token
 Create or edit `secrets.env` locally:
 

@@ -14,6 +14,7 @@ EVENTS = BASE / OV["event_file"]
 BOOT = BASE / OV.get("boot_file", "boot_state.json")
 DIALOGUE = BASE / OV.get("dialogue_file", "dialogue_state.json")
 FRAME = BASE / OV["reference_frame"]
+HUD_DIR = BASE / "assets" / "ui" / "hud"
 
 SRC_W = float(OV.get("source_width", 1672))
 SRC_H = float(OV.get("source_height", 941))
@@ -60,6 +61,7 @@ class Overlay(QWidget):
         self.sx = self.screen_w / SRC_W
         self.sy = self.screen_h / SRC_H
         self.font_family = self.pick_font()
+        self.hud = self.load_hud()
 
         self.setWindowTitle("Twitch Plays Pokemon Overlay")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
@@ -85,6 +87,16 @@ class Overlay(QWidget):
             if name in available:
                 return name
         return QApplication.font().family()
+
+    def load_hud(self):
+        sprites = {}
+        if not HUD_DIR.exists():
+            return sprites
+        for path in HUD_DIR.glob("*.png"):
+            pix = QPixmap(str(path))
+            if not pix.isNull():
+                sprites[path.stem] = pix
+        return sprites
 
     def read_json(self, path):
         try:
@@ -126,6 +138,15 @@ class Overlay(QWidget):
         p.setPen(color)
         p.drawText(QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h)), align, str(t))
 
+    def sprite(self, p, name, x, y, w, h):
+        pix = self.hud.get(name)
+        if not pix:
+            return False
+        target = QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h))
+        source = QRectF(0, 0, pix.width(), pix.height())
+        p.drawPixmap(target, pix, source)
+        return True
+
     def screen_text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
         p.setFont(self.font(size, bold))
         p.setPen(color)
@@ -162,19 +183,11 @@ class Overlay(QWidget):
 
         # Current Round body (below header)
         p.setBrush(CREAM2)
-        p.drawRect(QRectF(self.tx(1327), self.ty(183), self.tw(296), self.th(319)))
+        p.drawRect(QRectF(self.tx(1327), self.ty(183), self.tw(324), self.th(319)))
 
         # Live Chat body
         p.setBrush(DARK)
-        p.drawRect(QRectF(self.tx(1327), self.ty(537), self.tw(296), self.th(266)))
-
-        # Bottom HUD bodies (keep headers visible)
-        p.setBrush(CREAM2)
-        p.drawRect(QRectF(self.tx(6), self.ty(817), self.tw(265), self.th(74)))      # location
-        p.drawRect(QRectF(self.tx(275), self.ty(817), self.tw(338), self.th(74)))    # badges
-        p.drawRect(QRectF(self.tx(617), self.ty(817), self.tw(308), self.th(74)))    # party
-        p.drawRect(QRectF(self.tx(929), self.ty(817), self.tw(126), self.th(74)))    # deaths
-        p.drawRect(QRectF(self.tx(1061), self.ty(817), self.tw(252), self.th(74)))   # objective
+        p.drawRect(QRectF(self.tx(1327), self.ty(537), self.tw(318), self.th(266)))
 
         # Footer strip
         p.setBrush(FOOTER)
@@ -238,42 +251,11 @@ class Overlay(QWidget):
         deaths = int(self.state.get("deaths", st.get("deaths", 3)))
         objective = self.state.get("objective", st.get("objective", "Defeat Brock\nin Pewter City"))
 
-        # Location
-        self.draw_home_icon(p, 34, 856)
-        self.text(p, loc, 54, 835, 190, 45, 13, INK, True)
-
-        # Badges
-        badge_xs = [285, 331, 377, 423, 469, 515]
-        for i, bx in enumerate(badge_xs):
-            filled = i < badges
-            if filled:
-                # Alternate silver/blue for first two sample badges, then brown filled tokens
-                fill = QColor("#B6B6B6") if i == 0 else (QColor("#4AB1E8") if i == 1 else QColor("#6B5138"))
-                outline = QColor("#5E4934")
-            else:
-                fill = QColor("#5B4633")
-                outline = QColor("#463628")
-            p.setPen(QPen(outline, max(1, int(round(2 * self.avg_scale())))))
-            p.setBrush(fill)
-            self.ellipse(p, bx, 853, 15)
-
-        # Party
-        for i in range(6):
-            cx = 648 + i * 44
-            if i < party:
-                self.pokeball(p, cx, 853, 14)
-            else:
-                p.setPen(QPen(QColor("#423B32"), max(1, int(round(2 * self.avg_scale())))))
-                p.setBrush(QColor("#3D2E21"))
-                self.ellipse(p, cx, 853, 14)
-
-        # Deaths
-        self.draw_skull_icon(p, 966, 856)
-        self.text(p, deaths, 990, 836, 40, 40, 18, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
-
-        # Objective
-        self.draw_flag_icon(p, 1098, 856)
-        self.text(p, objective, 1120, 830, 170, 48, 11, INK, True)
+        self.draw_location_panel(p, loc)
+        self.draw_badges_panel(p, badges)
+        self.draw_party_panel(p, party)
+        self.draw_deaths_panel(p, deaths)
+        self.draw_objective_panel(p, objective)
 
         # Footer
         top = self.state.get("top_trainers", [])
@@ -289,40 +271,42 @@ class Overlay(QWidget):
         self.text(p, f"GYM BADGES EARNED: {gym_badges}", 1040, 909, 310, 22, 8, WHITE, True)
         self.text(p, "!trainer for your card", 1418, 909, 180, 22, 8, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
 
-    def draw_home_icon(self, p, cx, cy):
-        p.setPen(QPen(QColor("#5E4934"), max(1, int(round(2 * self.avg_scale())))))
-        p.setBrush(QBrush(QColor("#5BAA4A")))
-        p.drawRect(QRectF(self.tx(cx - 12), self.ty(cy - 2), self.tw(24), self.th(16)))
-        p.setBrush(QBrush(RED))
-        roof = QPolygonF([
-            QPointF(self.tx(cx - 16), self.ty(cy - 2)),
-            QPointF(self.tx(cx), self.ty(cy - 17)),
-            QPointF(self.tx(cx + 16), self.ty(cy - 2)),
-        ])
-        p.drawPolygon(roof)
-        p.setBrush(QBrush(CREAM2))
-        p.drawRect(QRectF(self.tx(cx - 4), self.ty(cy + 4), self.tw(8), self.th(10)))
+    def draw_location_panel(self, p, loc):
+        slug = str(loc).strip().lower().replace(" ", "_")
+        if self.sprite(p, f"bottom_location_{slug}", 6, 817, 265, 74):
+            return
+        self.sprite(p, "bottom_location_pallet_town", 6, 817, 265, 74)
+        p.setPen(Qt.NoPen)
+        p.setBrush(CREAM2)
+        p.drawRect(QRectF(self.tx(52), self.ty(835), self.tw(196), self.th(43)))
+        self.text(p, loc, 54, 835, 190, 45, 13, INK, True)
 
-    def draw_skull_icon(self, p, cx, cy):
-        p.setPen(QPen(INK, max(1, int(round(2 * self.avg_scale())))))
-        p.setBrush(QBrush(WHITE))
-        self.ellipse(p, cx, cy - 4, 13, 12)
-        p.drawRect(QRectF(self.tx(cx - 8), self.ty(cy + 4), self.tw(16), self.th(10)))
-        p.setBrush(QBrush(INK))
-        self.ellipse(p, cx - 5, cy - 5, 2.4)
-        self.ellipse(p, cx + 5, cy - 5, 2.4)
-        p.drawRect(QRectF(self.tx(cx - 1.5), self.ty(cy), self.tw(3), self.th(4)))
+    def draw_badges_panel(self, p, badges):
+        count = max(0, min(6, int(badges)))
+        if not self.sprite(p, f"bottom_badges_count_{count}", 275, 817, 338, 74):
+            self.sprite(p, "bottom_badges_count_2", 275, 817, 338, 74)
 
-    def draw_flag_icon(self, p, cx, cy):
-        p.setPen(QPen(INK, max(1, int(round(2 * self.avg_scale())))))
-        p.drawLine(QPointF(self.tx(cx - 9), self.ty(cy - 18)), QPointF(self.tx(cx - 9), self.ty(cy + 16)))
-        p.setBrush(QBrush(RED))
-        flag = QPolygonF([
-            QPointF(self.tx(cx - 8), self.ty(cy - 17)),
-            QPointF(self.tx(cx + 14), self.ty(cy - 10)),
-            QPointF(self.tx(cx - 8), self.ty(cy - 3)),
-        ])
-        p.drawPolygon(flag)
+    def draw_party_panel(self, p, party):
+        count = max(0, min(6, int(party)))
+        if not self.sprite(p, f"bottom_party_count_{count}", 617, 817, 308, 74):
+            self.sprite(p, "bottom_party_count_3", 617, 817, 308, 74)
+
+    def draw_deaths_panel(self, p, deaths):
+        self.sprite(p, "bottom_deaths", 929, 817, 126, 74)
+        if int(deaths) != 3:
+            p.setPen(Qt.NoPen)
+            p.setBrush(CREAM2)
+            p.drawRect(QRectF(self.tx(987), self.ty(833), self.tw(44), self.th(46)))
+            self.text(p, deaths, 990, 836, 40, 40, 18, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
+
+    def draw_objective_panel(self, p, objective):
+        self.sprite(p, "bottom_objective_defeat_brock", 1061, 817, 252, 74)
+        default_objective = OV.get("status", {}).get("objective", "Defeat Brock\nin Pewter City")
+        if str(objective) != str(default_objective):
+            p.setPen(Qt.NoPen)
+            p.setBrush(CREAM2)
+            p.drawRect(QRectF(self.tx(1115), self.ty(829), self.tw(172), self.th(52)))
+            self.text(p, objective, 1120, 830, 170, 48, 11, INK, True)
 
     def draw_active_effects(self, p):
         effects = self.state.get("active_effects", [])
