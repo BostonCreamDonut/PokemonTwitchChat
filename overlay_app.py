@@ -209,10 +209,6 @@ class Overlay(QWidget):
         p.setBrush(DARK)
         p.drawRect(QRectF(1548, 637, 330, 226))
 
-        # Footer strip
-        p.setBrush(FOOTER)
-        p.drawRect(QRectF(6, 1014, 1846, 31))
-
     def draw_votes(self, p):
         rows = self.state.get("votes", [])[:5]
         rem = float(self.state.get("time_remaining", 3.0))
@@ -277,24 +273,24 @@ class Overlay(QWidget):
         self.draw_deaths_panel(p, deaths)
         self.draw_objective_panel(p, objective)
 
-        # Footer
+        # Side stats, kept out of the center gameplay space.
         top = self.state.get("top_trainers", [])
-        top_name = top[0]["username"] if top else "pikafan23"
+        top_name = str(top[0]["username"] if top else "pikafan23")[:16]
         top_lvl = top[0]["level"] if top else 38
         total_trainers = int(self.state.get("unique_players", 1248))
         longest_streak = int(self.state.get("longest_streak", 27))
-        self.screen_text(p, f"TOP TRAINER: {top_name} (Lv. {top_lvl})", 30, 1016, 430, 28, 18, WHITE, True)
-        self.screen_text(p, f"LONGEST STREAK: {longest_streak}", 485, 1016, 285, 28, 18, WHITE, True)
-        self.screen_text(p, f"TOTAL TRAINERS: {total_trainers:,}", 795, 1016, 330, 28, 18, WHITE, True)
-        self.screen_text(p, "!trainer for your card", 1585, 1016, 300, 28, 18, GOLD, True, Qt.AlignRight | Qt.AlignVCenter)
+        self.screen_text(p, f"TOP: {top_name} Lv.{top_lvl}", 18, 878, 285, 24, 15, WHITE, True, Qt.AlignCenter)
+        self.screen_text(p, f"STREAK: {longest_streak}", 18, 908, 285, 24, 15, WHITE, True, Qt.AlignCenter)
+        self.screen_text(p, f"TRAINERS: {total_trainers:,}", 1558, 878, 330, 24, 15, WHITE, True, Qt.AlignCenter)
+        self.screen_text(p, "!trainer for card", 1558, 908, 330, 24, 15, GOLD, True, Qt.AlignCenter)
 
     def draw_location_panel(self, p, loc):
-        body = (22, 916, 296, 986)
-        icon_w, icon_h = 72, 72
+        body = (22, 984, 296, 1066)
+        icon_w, icon_h = 60, 60
         text = str(loc)
-        font_size = 30
+        font_size = 26
         text_w, text_h = self.screen_text_size(p, text, font_size, True)
-        gap = 20
+        gap = 14
         group_w = icon_w + gap + text_w
         x = body[0] + (body[2] - body[0] - group_w) / 2
         cy = body[1] + (body[3] - body[1]) / 2
@@ -303,7 +299,7 @@ class Overlay(QWidget):
 
     def draw_badges_panel(self, p, badges):
         count = max(0, min(8, int(badges)))
-        body = (330, 916, 972, 986)
+        body = (330, 984, 972, 1066)
         size = 52
         gap = 18
         group_w = 8 * size + 7 * gap
@@ -316,7 +312,7 @@ class Overlay(QWidget):
 
     def draw_party_panel(self, p, party):
         count = max(0, min(6, int(party)))
-        body = (1006, 916, 1290, 986)
+        body = (1006, 984, 1290, 1066)
         size = 48
         gap = -3
         group_w = 6 * size + 5 * gap
@@ -327,7 +323,7 @@ class Overlay(QWidget):
             self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size)
 
     def draw_deaths_panel(self, p, deaths):
-        body = (1324, 916, 1440, 986)
+        body = (1324, 984, 1440, 1066)
         text = str(deaths)
         font_size = 30
         text_w, text_h = self.screen_text_size(p, text, font_size, True)
@@ -340,7 +336,7 @@ class Overlay(QWidget):
         self.screen_text(p, text, x + skull_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_objective_panel(self, p, objective):
-        body = (1474, 916, 1898, 986)
+        body = (1474, 984, 1898, 1066)
         text = str(objective)
         font_size = 24
         lines = text.splitlines() or [text]

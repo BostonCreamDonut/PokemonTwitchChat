@@ -25,14 +25,14 @@ BADGE_REFERENCE = REFERENCE / "fire_red_badges.png"
 SKULL_REFERENCE = REFERENCE / "skull_pixel_reference.png"
 
 BOTTOM_BOXES = {
-    "location": (12, 868, 306, 996),
-    "badges": (320, 868, 982, 996),
-    "party": (996, 868, 1300, 996),
-    "deaths": (1314, 868, 1450, 996),
-    "objective": (1464, 868, 1908, 996),
+    "location": (12, 936, 306, 1076),
+    "badges": (320, 936, 982, 1076),
+    "party": (996, 936, 1300, 1076),
+    "deaths": (1314, 936, 1450, 1076),
+    "objective": (1464, 936, 1908, 1076),
 }
 
-GAME_APERTURE = (321, 166, 1528, 868)
+GAME_APERTURE = (321, 166, 1528, 936)
 
 FONT_DIR = Path("C:/Windows/Fonts")
 HEADER_FONT = FONT_DIR / "consolab.ttf"
@@ -85,26 +85,21 @@ def make_clean_frame():
     frame = Image.open(source).convert("RGBA")
     draw = ImageDraw.Draw(frame)
 
-    # The approved source used a checkerboard placeholder in the game area.
-    # Cut the full gameplay aperture to alpha 0 so OBS/mGBA shows through.
-    draw.rectangle(GAME_APERTURE, fill=(0, 0, 0, 0))
-
     # Clear live-value areas so the frame itself is clean even before PyQt paints state.
     draw.rectangle((1549, 219, 1907, 575), fill=CREAM)
     draw.rectangle((1548, 637, 1878, 865), fill=(14, 18, 20, 255))
 
     # Clear old bottom panel row, old trainer-status area, and old footer contents.
-    draw.rectangle((0, 868, SCREEN_W, 1048), fill=DARK)
-    draw.rectangle((0, 1014, SCREEN_W, 1078), fill=FOOTER)
-    draw.line((6, 1014, 1852, 1014), fill=(160, 96, 12, 255), width=2)
-    draw.line((6, 1076, 1852, 1076), fill=(160, 96, 12, 255), width=2)
-    draw.line((6, 1014, 6, 1076), fill=(160, 96, 12, 255), width=2)
-    draw.line((1852, 1014, 1852, 1076), fill=(160, 96, 12, 255), width=2)
+    draw.rectangle((0, 868, SCREEN_W, SCREEN_H), fill=DARK)
 
     # Shorten live chat visually so the new bottom row can use the lower-right space.
-    draw.rectangle((1548, 866, 1915, 1014), fill=DARK)
+    draw.rectangle((1548, 866, 1915, 936), fill=DARK)
     draw.line((1548, 865, 1910, 865), fill=GOLD, width=3)
     draw.line((1548, 862, 1910, 862), fill=INNER_RED, width=2)
+
+    # The approved source used a checkerboard placeholder in the game area.
+    # Cut the full gameplay aperture to alpha 0 so OBS/mGBA shows through.
+    draw.rectangle(GAME_APERTURE, fill=(0, 0, 0, 0))
 
     for title, box in BOTTOM_BOXES.items():
         panel(draw, box, title)

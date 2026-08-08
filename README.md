@@ -18,6 +18,7 @@ Recommended source order:
 2. mGBA Window Capture
 
 The mGBA source should be placed underneath the overlay so it shows through the transparent game opening.
+Current game opening: `x=321`, `y=166`, `width=1207`, `height=770`.
 
 ## Raspberry Pi run order
 On the Pi, pull the repo and run:
