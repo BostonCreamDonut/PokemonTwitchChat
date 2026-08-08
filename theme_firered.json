@@ -1,0 +1,23 @@
+{
+  "name": "FireRed",
+  "colors": {
+    "background": "#171515",
+    "panel": "#242020",
+    "panel_alt": "#322924",
+    "cream": "#F6E8C8",
+    "cream_light": "#FFF7E3",
+    "red": "#C63A28",
+    "red_dark": "#8E271E",
+    "gold": "#E9B83C",
+    "steel": "#8B837A",
+    "muted": "#C8BBA9",
+    "white": "#FFF9EC",
+    "black": "#111111",
+    "green": "#7CB342",
+    "blue": "#4D89D8"
+  },
+  "layout": {
+    "corner_radius": 8,
+    "border_width": 3
+  }
+}

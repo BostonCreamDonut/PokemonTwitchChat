@@ -1,0 +1,213 @@
+{
+  "twitch": {
+    "channel": "BostonCream_Donut",
+    "bot_username": "BostonCream_Donut"
+  },
+  "controls": {
+    "!up": "Up",
+    "!down": "Down",
+    "!left": "Left",
+    "!right": "Right",
+    "!a": "x",
+    "!b": "z",
+    "!l": "a",
+    "!r": "s",
+    "!start": "Return",
+    "!select": "BackSpace"
+  },
+  "input": {
+    "hold_seconds": 0.2,
+    "activate_mgba": false,
+    "mgba_window_name": "mGBA"
+  },
+  "mode": {
+    "vote_window_seconds": 3.0,
+    "one_vote_per_user_per_round": true
+  },
+  "voting": {
+    "regular_weight": 1,
+    "subscriber_weight": 2
+  },
+  "events": {
+    "subscriber_alert_seconds": 4.0,
+    "gift_sub_alert_seconds": 4.5,
+    "cheer_alert_seconds": 4.5,
+    "effect_banner_seconds": 3.0,
+    "cheer_effects": [
+      {
+        "minimum_bits": 100,
+        "effect": "double_votes",
+        "duration_seconds": 30,
+        "label": "DOUBLE VOTES"
+      },
+      {
+        "minimum_bits": 500,
+        "effect": "speed_round",
+        "duration_seconds": 60,
+        "label": "SPEED ROUND"
+      },
+      {
+        "minimum_bits": 1000,
+        "effect": "chaos",
+        "duration_seconds": 60,
+        "label": "CHAOS MODE"
+      },
+      {
+        "minimum_bits": 1500,
+        "effect": "anarchy",
+        "duration_seconds": 60,
+        "label": "ANARCHY MODE"
+      },
+      {
+        "minimum_bits": 2000,
+        "effect": "reverse_controls",
+        "duration_seconds": 60,
+        "label": "REVERSE CONTROLS"
+      }
+    ]
+  },
+  "overlay": {
+    "enabled": true,
+    "refresh_hz": 30,
+    "state_file": "overlay_state.json",
+    "event_file": "overlay_event.json",
+    "screen_width": 1920,
+    "screen_height": 1080,
+    "game_rect": {
+      "x": 317,
+      "y": 172,
+      "width": 1194,
+      "height": 722
+    },
+    "top_vote_count": 5,
+    "recent_count": 7,
+    "left_panel_width": 215,
+    "right_panel_width": 245,
+    "header_height": 66,
+    "theme_file": "theme_firered.json",
+    "trainer_card_seconds": 6.0,
+    "boot_file": "boot_state.json",
+    "dialogue_file": "dialogue_state.json",
+    "reference_frame": "assets/ui/overlay_frame.png",
+    "right_panel": {
+      "x": 1530,
+      "vote_y": 153,
+      "width": 390,
+      "vote_height": 390,
+      "chat_y": 560,
+      "chat_height": 300,
+      "trainer_y": 870,
+      "trainer_height": 80
+    },
+    "status": {
+      "location": "Pallet Town",
+      "badges": 2,
+      "party_size": 3,
+      "deaths": 3,
+      "objective": "Defeat Brock\nin Pewter City",
+      "gym_badges_earned": 2
+    },
+    "status_layout": {
+      "location": {
+        "x": 18,
+        "y": 824,
+        "width": 280,
+        "height": 126
+      },
+      "badges": {
+        "x": 300,
+        "y": 824,
+        "width": 390,
+        "height": 126
+      },
+      "party": {
+        "x": 692,
+        "y": 824,
+        "width": 315,
+        "height": 126
+      },
+      "deaths": {
+        "x": 1009,
+        "y": 824,
+        "width": 170,
+        "height": 126
+      },
+      "objective": {
+        "x": 1181,
+        "y": 824,
+        "width": 330,
+        "height": 126
+      },
+      "trainer_status": {
+        "x": 1530,
+        "y": 870,
+        "width": 390,
+        "height": 80
+      },
+      "footer": {
+        "x": 18,
+        "y": 960,
+        "width": 1890,
+        "height": 70
+      }
+    },
+    "fit_scale": 1.0546875,
+    "fit_offset_x": 150,
+    "fit_offset_y": 0,
+    "source_width": 1672,
+    "source_height": 941,
+    "scale_x": 1.1483253588516746,
+    "scale_y": 1.1477151965993624
+  },
+  "stream_system": {
+    "show_boot_sequence": true,
+    "boot_step_seconds": 0.7,
+    "trainer_xp_per_vote": 1,
+    "trainer_level_xp": 100,
+    "gym_challenge_interval_minutes": 30,
+    "gym_challenge_duration_seconds": 90,
+    "npc_dialogue_seconds": 4.5,
+    "sound_enabled": true,
+    "sound_volume": 0.35
+  },
+  "channel_points": {
+    "enabled": false,
+    "note": "Event hook is implemented. Native Twitch Channel Points requires EventSub/client credentials.",
+    "rewards": {
+      "nickname": {
+        "event": "npc_dialogue",
+        "speaker": "Professor Oak"
+      },
+      "rival_name": {
+        "event": "npc_dialogue",
+        "speaker": "Rival"
+      },
+      "highlight_vote": {
+        "event": "trainer_shoutout"
+      },
+      "trainer_card": {
+        "event": "trainer_card"
+      }
+    }
+  },
+  "gym_challenges": [
+    {
+      "name": "ROUTE RUSH",
+      "description": "Cast 75 weighted votes before time runs out!",
+      "target": 75,
+      "metric": "weighted_votes",
+      "reward": "DOUBLE VOTES",
+      "reward_effect": "double_votes",
+      "reward_seconds": 20
+    },
+    {
+      "name": "TRAINER SWARM",
+      "description": "Get 20 unique trainers voting!",
+      "target": 20,
+      "metric": "unique_voters",
+      "reward": "SPEED ROUND",
+      "reward_effect": "speed_round",
+      "reward_seconds": 20
+    }
+  ]
+}
