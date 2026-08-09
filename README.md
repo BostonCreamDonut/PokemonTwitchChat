@@ -50,8 +50,19 @@ To rebuild the polished frame and sprite set:
 
     python tools/build_overlay_assets.py
 
-## Updating game status
-The overlay reads live game status from `game_state.json`. Update it locally on the Pi:
+## Automatic game status
+The overlay does not render the game. OBS should still show mGBA as its own cropped source underneath the overlay. The HUD can update automatically by reading mGBA memory through a Lua script.
+
+1. Start the stream app with `./run.sh`.
+2. In mGBA, open `Tools -> Scripting`.
+3. Load `scripts/mgba_firered_state_bridge.lua`.
+
+When the bridge is loaded, Location, Badges, Party count, and the badge-based Objective update automatically. This is configured for Pokemon FireRed US v1.0. If the values look wrong, disable `"auto_game_state.enabled"` in `config.json` and use the manual commands below.
+
+Deaths are still manual because FireRed does not have a built-in death counter.
+
+## Manual game status
+The overlay reads live game status from `game_state.json`. Manual commands are still useful for deaths or quick corrections:
 
     python game_state.py location "Viridian City"
     python game_state.py badges 1

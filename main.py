@@ -10,6 +10,7 @@ from trainer_db import TrainerDB
 from sound_engine import SoundEngine
 from event_engine import EventEngine
 from game_state import read_state, update_state
+from auto_game_state import AutoGameStateServer
 
 BASE=Path(__file__).resolve().parent
 CFG=json.loads((BASE/"config.json").read_text(encoding="utf-8"))
@@ -58,6 +59,7 @@ class App:
         self.sound=SoundEngine(BASE/"assets"/"sounds",ss["sound_enabled"],ss["sound_volume"])
         self.events=EventEngine(BASE,CFG,self.sound)
         self.db=TrainerDB(BASE/"data"/"trainers.sqlite3", ss["trainer_level_xp"])
+        self.auto_game_state=AutoGameStateServer(CFG, STOP)
 
         self.base_window=float(CFG["mode"]["vote_window_seconds"])
         self.vote_window=self.base_window
@@ -380,6 +382,7 @@ class App:
         if not ok:raise SystemExit(f"Token validation failed: {data}")
         if CFG["overlay"].get("enabled", True):
             self.overlay_proc=subprocess.Popen([sys.executable,str(BASE/"overlay_app.py")],cwd=BASE)
+        self.auto_game_state.start_thread()
         threading.Thread(target=self.state_writer,daemon=True).start()
         threading.Thread(target=self.round_worker,daemon=True).start()
         threading.Thread(target=self.gym_worker,daemon=True).start()
