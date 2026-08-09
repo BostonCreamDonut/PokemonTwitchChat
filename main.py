@@ -9,6 +9,7 @@ from token_validator import TokenValidator
 from trainer_db import TrainerDB
 from sound_engine import SoundEngine
 from event_engine import EventEngine
+from game_state import read_state, update_state
 
 BASE=Path(__file__).resolve().parent
 CFG=json.loads((BASE/"config.json").read_text(encoding="utf-8"))
@@ -37,6 +38,15 @@ def is_sub(tags):
     if tags.get("subscriber")=="1": return True
     return any(x.startswith(("subscriber/","founder/")) for x in tags.get("badges","").split(","))
 
+def is_admin(user, tags):
+    channel = CFG["twitch"]["channel"].lower()
+    badges = tags.get("badges", "")
+    return (
+        user.lower() == channel
+        or tags.get("mod") == "1"
+        or "broadcaster/" in badges
+    )
+
 class App:
     def __init__(self, token):
         self.token=token
@@ -57,6 +67,9 @@ class App:
         self.players=set(); self.rounds=0; self.effects={}
 
         self.state_path=BASE/CFG["overlay"]["state_file"]
+        self.game_state_path=BASE/CFG["overlay"].get("game_state_file","game_state.json")
+        if not self.game_state_path.exists():
+            update_state({})
         self.overlay_proc=None
 
         self.gym=None
@@ -164,6 +177,8 @@ class App:
 
         # lightweight built-in commands
         low=msg.strip().lower()
+        if self.handle_game_state_command(user,msg,tags):
+            return
         if low=="!trainer":
             card=self.db.card(user)
             if card:
@@ -212,6 +227,41 @@ class App:
             if self.gym and self.gym["metric"]=="unique_voters":
                 self.gym["voters"].add(u)
                 self.gym["progress"] = len(self.gym["voters"])
+
+    def handle_game_state_command(self, user, msg, tags):
+        if not is_admin(user, tags):
+            return False
+        text = msg.strip()
+        low = text.lower()
+        commands = {
+            "!location": "location",
+            "!setlocation": "location",
+            "!badges": "badges",
+            "!setbadges": "badges",
+            "!party": "party_size",
+            "!setparty": "party_size",
+            "!deaths": "deaths",
+            "!setdeaths": "deaths",
+            "!objective": "objective",
+            "!setobjective": "objective",
+        }
+        if low == "!death":
+            current = read_state(CFG)
+            update_state({"deaths": int(current.get("deaths", 0)) + 1}, CFG)
+            return True
+        for prefix, field in commands.items():
+            if low == prefix or low.startswith(prefix + " "):
+                value = text[len(prefix):].strip()
+                if not value:
+                    return True
+                if field in ("badges", "party_size", "deaths"):
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        return True
+                update_state({field: value}, CFG)
+                return True
+        return False
 
     def choose(self):
         if not self.votes:return None
@@ -287,6 +337,7 @@ class App:
 
     def state(self):
         with self.lock:
+            game = read_state(CFG)
             total=sum(self.votes.values())
             ranked=sorted(self.votes.items(),key=lambda x:(-x[1],self.order.get(x[0],999999)))[:5]
             rows=[{"command":c,"weighted_votes":v,"raw_votes":self.raw.get(c,0),
@@ -309,7 +360,12 @@ class App:
                 "active_effects":self.active_effects(),
                 "subscriber_multiplier":CFG["voting"]["subscriber_weight"],
                 "top_trainers":self.db.top(3),
-                "gym_challenge":self.gym_state()
+                "gym_challenge":self.gym_state(),
+                "location":game["location"],
+                "badges":game["badges"],
+                "party_size":game["party_size"],
+                "deaths":game["deaths"],
+                "objective":game["objective"]
             }
 
     def state_writer(self):
@@ -335,8 +391,13 @@ class App:
         if self.overlay_proc and self.overlay_proc.poll() is None:
             self.overlay_proc.terminate()
 
-app=App(load_token())
-signal.signal(signal.SIGINT,lambda *_:app.stop())
-signal.signal(signal.SIGTERM,lambda *_:app.stop())
-try: app.run()
-finally: app.stop()
+def main():
+    app=App(load_token())
+    signal.signal(signal.SIGINT,lambda *_:app.stop())
+    signal.signal(signal.SIGTERM,lambda *_:app.stop())
+    try: app.run()
+    finally: app.stop()
+
+
+if __name__ == "__main__":
+    main()

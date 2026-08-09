@@ -50,6 +50,25 @@ To rebuild the polished frame and sprite set:
 
     python tools/build_overlay_assets.py
 
+## Updating game status
+The overlay reads live game status from `game_state.json`. Update it locally on the Pi:
+
+    python game_state.py location "Viridian City"
+    python game_state.py badges 1
+    python game_state.py party 4
+    python game_state.py death
+    python game_state.py deaths 2
+    python game_state.py objective "Defeat Misty\nin Cerulean City"
+
+The broadcaster or a mod can also update it from Twitch chat:
+
+    !location Viridian City
+    !badges 1
+    !party 4
+    !death
+    !deaths 2
+    !objective Defeat Misty in Cerulean City
+
 ## Token
 Create or edit `secrets.env` locally:
 

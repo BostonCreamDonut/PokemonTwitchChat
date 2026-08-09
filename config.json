@@ -70,6 +70,7 @@
     "enabled": true,
     "refresh_hz": 30,
     "state_file": "overlay_state.json",
+    "game_state_file": "game_state.json",
     "event_file": "overlay_event.json",
     "screen_width": 1920,
     "screen_height": 1080,
