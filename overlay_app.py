@@ -172,6 +172,11 @@ class Overlay(QWidget):
         metrics = p.fontMetrics()
         return metrics.horizontalAdvance(str(t)), metrics.height()
 
+    def screen_rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
+        p.setPen(QPen(border, max(1, int(round(bw)))))
+        p.setBrush(QBrush(fill))
+        p.drawRoundedRect(QRectF(float(x), float(y), float(w), float(h)), float(r), float(r))
+
     def rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
         p.setPen(QPen(border, max(1, bw * self.avg_scale())))
         p.setBrush(QBrush(fill))
@@ -213,35 +218,35 @@ class Overlay(QWidget):
         rows = self.state.get("votes", [])[:5]
         rem = float(self.state.get("time_remaining", 3.0))
 
-        yy = 205
         if not rows:
-            self.text(p, "Waiting for votes…", 1340, 240, 230, 22, 10, QColor("#68645D"))
+            self.screen_text(p, "Waiting for votes...", 1564, 355, 310, 24, 14, QColor("#68645D"), False, Qt.AlignCenter)
 
+        yy = 250
         for i, row in enumerate(rows):
             pct = float(row.get("percent", 0))
             wt = int(row.get("weighted_votes", 0))
             cmd = LABELS.get(row.get("command"), row.get("command", "")).upper()
             col = VOTE_COLORS[i % len(VOTE_COLORS)]
 
-            self.rounded(p, 1340, yy, 28, 28, col, QColor("#222"), 4, 2)
-            sym = {"UP":"↑","DOWN":"↓","LEFT":"←","RIGHT":"→"}.get(cmd, cmd[:1])
-            self.text(p, sym, 1340, yy, 28, 28, 14, WHITE, True, Qt.AlignCenter)
-            self.text(p, cmd, 1380, yy, 65, 28, 10, INK, True)
+            self.screen_rounded(p, 1570, yy, 32, 32, col, QColor("#222"), 4, 2)
+            sym = {"UP": "^", "DOWN": "v", "LEFT": "<", "RIGHT": ">"}.get(cmd, cmd[:1])
+            self.screen_text(p, sym, 1570, yy, 32, 32, 18, WHITE, True, Qt.AlignCenter)
+            self.screen_text(p, cmd, 1617, yy, 75, 32, 16, INK, True)
 
-            bx, by, bw, bh = 1450, yy + 5, 78, 16
-            self.rounded(p, bx, by, bw, bh, QColor("#E3D8C2"), QColor("#C7B99F"), 3, 1)
+            bx, by, bw, bh = 1695, yy + 7, 112, 18
+            self.screen_rounded(p, bx, by, bw, bh, QColor("#E3D8C2"), QColor("#C7B99F"), 3, 1)
             if pct > 0:
-                self.rounded(p, bx, by, max(3, bw * pct / 100), bh, col, col, 3, 0)
+                self.screen_rounded(p, bx, by, max(3, bw * pct / 100), bh, col, col, 3, 0)
 
-            self.text(p, f"{pct:.0f}%", 1545, yy-1, 55, 16, 10, INK, True, Qt.AlignRight | Qt.AlignVCenter)
-            self.text(p, f"({wt})", 1545, yy+13, 55, 14, 8, INK, True, Qt.AlignRight | Qt.AlignVCenter)
-            yy += 54
+            self.screen_text(p, f"{pct:.0f}%", 1817, yy - 1, 70, 18, 16, INK, True, Qt.AlignRight | Qt.AlignVCenter)
+            self.screen_text(p, f"({wt})", 1817, yy + 17, 70, 16, 13, INK, True, Qt.AlignRight | Qt.AlignVCenter)
+            yy += 58
 
-        self.text(p, f"Total Weighted Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
-                  1352, 462, 235, 22, 9, INK, True, Qt.AlignCenter)
+        self.screen_text(p, f"Total Weighted Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
+                         1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
 
-        self.rounded(p, 1480, 167, 46, 21, QColor("#B53022"), QColor("#8E261B"), 4, 1)
-        self.text(p, f"{rem:.1f}s", 1481, 167, 44, 21, 8, WHITE, True, Qt.AlignCenter)
+        self.screen_rounded(p, 1700, 196, 52, 24, QColor("#B53022"), QColor("#8E261B"), 4, 1)
+        self.screen_text(p, f"{rem:.1f}s", 1700, 196, 52, 24, 12, WHITE, True, Qt.AlignCenter)
 
     def draw_chat(self, p):
         yy = 555
@@ -281,8 +286,7 @@ class Overlay(QWidget):
         longest_streak = int(self.state.get("longest_streak", 27))
         self.screen_text(p, f"TOP: {top_name} Lv.{top_lvl}", 18, 878, 285, 24, 15, WHITE, True, Qt.AlignCenter)
         self.screen_text(p, f"STREAK: {longest_streak}", 18, 908, 285, 24, 15, WHITE, True, Qt.AlignCenter)
-        self.screen_text(p, f"TRAINERS: {total_trainers:,}", 1558, 878, 330, 24, 15, WHITE, True, Qt.AlignCenter)
-        self.screen_text(p, "!trainer for card", 1558, 908, 330, 24, 15, GOLD, True, Qt.AlignCenter)
+        self.screen_text(p, f"TRAINERS: {total_trainers:,}", 1558, 893, 330, 24, 15, WHITE, True, Qt.AlignCenter)
 
     def draw_location_panel(self, p, loc):
         body = (22, 984, 296, 1066)
