@@ -8,6 +8,7 @@ local RECONNECT_EVERY_FRAMES = 180
 
 -- Pokemon FireRed US v1.0 symbols from pret/pokefirered.
 local SAVE_BLOCK_1 = 0x0202552C
+local SAVE_BLOCK_1_PTR = 0x03005008
 local OFFSET_LOCATION = 0x0004
 local OFFSET_PARTY_COUNT = 0x0034
 local OFFSET_BADGE_FLAGS_BYTE = 0x0FE4
@@ -59,8 +60,19 @@ local function read8(addr)
     return emu:read8(addr)
 end
 
-local function badgeCount()
-    local byte = read8(SAVE_BLOCK_1 + OFFSET_BADGE_FLAGS_BYTE)
+local function read32(addr)
+    return read8(addr)
+        + read8(addr + 1) * 0x100
+        + read8(addr + 2) * 0x10000
+        + read8(addr + 3) * 0x1000000
+end
+
+local function saneSaveBlockAddress(addr)
+    return addr and addr >= 0x02000000 and addr < 0x02040000
+end
+
+local function badgeCount(saveBlock)
+    local byte = read8(saveBlock + OFFSET_BADGE_FLAGS_BYTE)
     local count = 0
     for bit = 0, 7 do
         if math.floor(byte / (2 ^ bit)) % 2 == 1 then
@@ -75,13 +87,19 @@ local function makePayload()
         return nil, "No ROM/core loaded yet."
     end
     local ok, textOrErr = pcall(function()
-        local mapGroup = read8(SAVE_BLOCK_1 + OFFSET_LOCATION)
-        local mapNum = read8(SAVE_BLOCK_1 + OFFSET_LOCATION + 1)
-        local partySize = read8(SAVE_BLOCK_1 + OFFSET_PARTY_COUNT)
-        local badges = badgeCount()
+        local ptr = read32(SAVE_BLOCK_1_PTR)
+        local ptrValid = saneSaveBlockAddress(ptr)
+        local ptrSaveBlock = ptrValid and ptr or SAVE_BLOCK_1
+
+        local fixedMapGroup = read8(SAVE_BLOCK_1 + OFFSET_LOCATION)
+        local fixedMapNum = read8(SAVE_BLOCK_1 + OFFSET_LOCATION + 1)
+        local ptrMapGroup = read8(ptrSaveBlock + OFFSET_LOCATION)
+        local ptrMapNum = read8(ptrSaveBlock + OFFSET_LOCATION + 1)
+        local partySize = read8(ptrSaveBlock + OFFSET_PARTY_COUNT)
+        local badges = badgeCount(ptrSaveBlock)
         return string.format(
-            '{"map_group":%d,"map_num":%d,"party_size":%d,"badges":%d}\n',
-            mapGroup, mapNum, partySize, badges
+            '{"map_group":%d,"map_num":%d,"fixed_map_group":%d,"fixed_map_num":%d,"ptr_map_group":%d,"ptr_map_num":%d,"save_block1_ptr":%d,"party_size":%d,"badges":%d}\n',
+            ptrMapGroup, ptrMapNum, fixedMapGroup, fixedMapNum, ptrMapGroup, ptrMapNum, ptr, partySize, badges
         )
     end)
     if ok then

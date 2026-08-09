@@ -293,8 +293,17 @@ class Overlay(QWidget):
         icon_w, icon_h = 60, 60
         text = str(loc)
         font_size = 26
-        text_w, text_h = self.screen_text_size(p, text, font_size, True)
         gap = 14
+        max_text_w = body[2] - body[0] - icon_w - gap - 16
+        text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        while text_w > max_text_w and font_size > 16:
+            font_size -= 1
+            text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        if text_w > max_text_w:
+            while text and self.screen_text_size(p, text + "...", font_size, True)[0] > max_text_w:
+                text = text[:-1].rstrip()
+            text = text + "..."
+            text_w, text_h = self.screen_text_size(p, text, font_size, True)
         group_w = icon_w + gap + text_w
         x = body[0] + (body[2] - body[0] - group_w) / 2
         cy = body[1] + (body[3] - body[1]) / 2

@@ -58,6 +58,7 @@ The overlay does not render the game. OBS should still show mGBA as its own crop
 3. Load `scripts/mgba_firered_state_bridge.lua`.
 
 When the bridge is loaded, Location, Badges, Party count, and the badge-based Objective update automatically. This is configured for Pokemon FireRed US v1.0. If the values look wrong, disable `"auto_game_state.enabled"` in `config.json` and use the manual commands below.
+The terminal running `./run.sh` prints each accepted memory update, including raw map values, which helps diagnose ROM/address mismatches.
 
 Deaths are still manual because FireRed does not have a built-in death counter.
 

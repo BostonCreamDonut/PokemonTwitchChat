@@ -36,13 +36,29 @@ def load_map_names():
 
 
 def clean_map_name(raw):
+    if raw.startswith("BattleColosseum"):
+        return "Battle Col."
+    if raw == "TradeCenter":
+        return "Trade Center"
+    if raw == "RecordCorner":
+        return "Record Corner"
+    if raw == "UnionRoom":
+        return "Union Room"
+
     name = raw.replace("_", " ")
     name = re.sub(r"(?<=[a-z])(?=[A-Z0-9])", " ", name)
     name = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", " ", name)
     name = re.sub(r"\bPokemon\b", "Pokemon", name)
+    name = name.replace("Players House", "House")
+    name = name.replace("Rivals House", "Rival House")
+    name = name.replace("Professor Oaks Lab", "Oak's Lab")
     name = name.replace("Mt ", "Mt. ")
     name = name.replace("SS Anne", "S.S. Anne")
+    name = name.replace("Pokemon Center 1 F", "Pokemon Center")
+    name = name.replace("Pokemon Center 2 F", "Pokemon Center")
     name = name.replace("P C", "Pokemon Center")
+    name = name.replace(" 1 F", "")
+    name = name.replace(" 2 F", "")
     name = re.sub(r"\s+", " ", name).strip()
     return name
 
@@ -114,11 +130,15 @@ class AutoGameStateServer:
             return
         self.last_payload = comparable
         update_state(state, self.cfg)
+        print(
+            "Game state:",
+            f"{state['location']} | badges={state['badges']} party={state['party_size']}",
+            f"raw={payload}",
+        )
 
     def derive_state(self, payload):
         current = read_state(self.cfg)
-        map_group = int(payload.get("map_group", -1))
-        map_num = int(payload.get("map_num", -1))
+        map_group, map_num = self.best_map_candidate(payload, current)
         badges = max(0, min(8, int(payload.get("badges", current.get("badges", 0)))))
         party_size = max(0, min(6, int(payload.get("party_size", current.get("party_size", 1)))))
         location = self.map_names.get((map_group, map_num), current.get("location", "Unknown"))
@@ -132,6 +152,31 @@ class AutoGameStateServer:
             "deaths": int(current.get("deaths", 0)),
             "objective": objective,
         }
+
+    def best_map_candidate(self, payload, current):
+        candidates = []
+        for group_key, num_key in (
+            ("ptr_map_group", "ptr_map_num"),
+            ("map_group", "map_num"),
+            ("fixed_map_group", "fixed_map_num"),
+        ):
+            try:
+                group = int(payload.get(group_key, -1))
+                num = int(payload.get(num_key, -1))
+            except (TypeError, ValueError):
+                continue
+            if (group, num) in self.map_names:
+                candidates.append((group, num))
+
+        non_link = [candidate for candidate in candidates if candidate[0] != 0]
+        if non_link:
+            return non_link[0]
+        if candidates:
+            current_location = str(current.get("location", ""))
+            if current_location and current_location not in ("Unknown", "Battle Col."):
+                return (-1, -1)
+            return candidates[0]
+        return (-1, -1)
 
 
 def main():
