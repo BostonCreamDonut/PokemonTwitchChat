@@ -9,3 +9,5 @@ dialogue_state.json
 __pycache__/
 *.pyc
 assets/ui/mockups/
+assets/ui/hud/pokemon_icons_test.png
+assets/ui/party_icon_preview.png

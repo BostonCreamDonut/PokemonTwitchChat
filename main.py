@@ -366,6 +366,8 @@ class App:
                 "location":game["location"],
                 "badges":game["badges"],
                 "party_size":game["party_size"],
+                "party_fainted":game.get("party_fainted", []),
+                "party_species":game.get("party_species", []),
                 "deaths":game["deaths"],
                 "objective":game["objective"]
             }

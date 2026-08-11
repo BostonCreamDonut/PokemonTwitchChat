@@ -92,10 +92,15 @@ class Overlay(QWidget):
         sprites = {}
         if not HUD_DIR.exists():
             return sprites
-        for path in HUD_DIR.glob("*.png"):
+        for path in HUD_DIR.rglob("*.png"):
             pix = QPixmap(str(path))
             if not pix.isNull():
-                sprites[path.stem] = pix
+                if path.parent.name == "pokemon_icons_display":
+                    sprites[f"pokemon_{path.stem}"] = pix
+                elif path.parent.name == "pokemon_icons":
+                    sprites.setdefault(f"pokemon_{path.stem}", pix)
+                else:
+                    sprites[path.stem] = pix
         return sprites
 
     def read_json(self, path):
@@ -153,13 +158,18 @@ class Overlay(QWidget):
         p.drawPixmap(target, pix, source)
         return True
 
-    def screen_sprite(self, p, name, x, y, w, h):
+    def screen_sprite(self, p, name, x, y, w, h, opacity=1.0):
         pix = self.hud.get(name)
         if not pix:
             return False
         target = QRectF(float(x), float(y), float(w), float(h))
         source = QRectF(0, 0, pix.width(), pix.height())
+        if opacity < 1.0:
+            p.save()
+            p.setOpacity(max(0.0, min(1.0, float(opacity))))
         p.drawPixmap(target, pix, source)
+        if opacity < 1.0:
+            p.restore()
         return True
 
     def screen_text(self, p, t, x, y, w, h, size=12, color=INK, bold=False, align=Qt.AlignLeft | Qt.AlignVCenter):
@@ -269,12 +279,14 @@ class Overlay(QWidget):
         loc = self.state.get("location", st.get("location", "Pallet Town"))
         badges = int(self.state.get("badges", st.get("badges", 2)))
         party = int(self.state.get("party_size", st.get("party_size", 3)))
+        party_fainted = self.state.get("party_fainted", [])
+        party_species = self.state.get("party_species", [])
         deaths = int(self.state.get("deaths", st.get("deaths", 3)))
         objective = self.state.get("objective", st.get("objective", "Defeat Brock\nin Pewter City"))
 
         self.draw_location_panel(p, loc)
         self.draw_badges_panel(p, badges)
-        self.draw_party_panel(p, party)
+        self.draw_party_panel(p, party, party_fainted, party_species)
         self.draw_deaths_panel(p, deaths)
         self.draw_objective_panel(p, objective)
 
@@ -323,17 +335,38 @@ class Overlay(QWidget):
             if not self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size):
                 self.screen_sprite(p, f"badge_{i}", x0 + i * (size + gap), y0, size, size)
 
-    def draw_party_panel(self, p, party):
+    def draw_party_panel(self, p, party, party_fainted=None, party_species=None):
         count = max(0, min(6, int(party)))
+        party_fainted = party_fainted if isinstance(party_fainted, list) else []
+        party_species = party_species if isinstance(party_species, list) else []
         body = (1006, 984, 1290, 1066)
-        size = 48
-        gap = -3
+        size = 52
+        gap = -7
         group_w = 6 * size + 5 * gap
         x0 = body[0] + (body[2] - body[0] - group_w) / 2
         y0 = body[1] + (body[3] - body[1] - size) / 2
         for i in range(6):
-            name = "party_pokeball" if i < count else "party_empty"
-            self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size)
+            name = "party_empty"
+            if i < count:
+                species = self.species_to_dex(party_species[i]) if i < len(party_species) else 0
+                name = f"pokemon_{species:03d}" if species else "party_pokeball"
+            opacity = 0.35 if i < count and i < len(party_fainted) and party_fainted[i] else 1.0
+            if not self.screen_sprite(p, name, x0 + i * (size + gap), y0, size, size, opacity):
+                fallback = "party_pokeball" if i < count else "party_empty"
+                self.screen_sprite(p, fallback, x0 + i * (size + gap), y0, size, size, opacity)
+
+    def species_to_dex(self, species):
+        try:
+            species = int(species)
+        except (TypeError, ValueError):
+            return 0
+        if 1 <= species <= 251:
+            return species
+        if 252 <= species <= 276:
+            return 201
+        if 277 <= species <= 411:
+            return species - 25
+        return 0
 
     def draw_deaths_panel(self, p, deaths):
         body = (1324, 984, 1440, 1066)

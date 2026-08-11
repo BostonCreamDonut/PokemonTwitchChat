@@ -22,6 +22,8 @@ def default_state(cfg):
         "location": status.get("location", "Pallet Town"),
         "badges": int(status.get("badges", 0)),
         "party_size": int(status.get("party_size", 1)),
+        "party_fainted": [],
+        "party_species": [],
         "deaths": int(status.get("deaths", 0)),
         "objective": status.get("objective", "Start the adventure"),
     }
@@ -34,6 +36,20 @@ def clean_state(data, cfg):
     base["location"] = str(base["location"]).strip() or "Unknown"
     base["badges"] = max(0, min(8, int(base["badges"])))
     base["party_size"] = max(0, min(6, int(base["party_size"])))
+    fainted = base.get("party_fainted", [])
+    if not isinstance(fainted, list):
+        fainted = []
+    base["party_fainted"] = [bool(value) for value in fainted[:6]]
+    species = base.get("party_species", [])
+    if not isinstance(species, list):
+        species = []
+    clean_species = []
+    for value in species[:6]:
+        try:
+            clean_species.append(max(0, int(value)))
+        except (TypeError, ValueError):
+            clean_species.append(0)
+    base["party_species"] = clean_species
     base["deaths"] = max(0, int(base["deaths"]))
     base["objective"] = str(base["objective"]).replace("\\n", "\n").strip() or "Continue the adventure"
     return base

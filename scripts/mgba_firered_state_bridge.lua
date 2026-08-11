@@ -10,9 +10,24 @@ local RECONNECT_EVERY_FRAMES = 180
 local SAVE_BLOCK_1 = 0x0202552C
 local SAVE_BLOCK_1_PTR = 0x03005008
 local PLAYER_PARTY_COUNT = 0x02024029
+local PLAYER_PARTY = 0x02024284
 local OFFSET_LOCATION = 0x0004
 local OFFSET_PARTY_COUNT = 0x0034
 local OFFSET_BADGE_FLAGS_BYTE = 0x0FE4
+local PARTY_MON_SIZE = 100
+local PARTY_MON_PERSONALITY_OFFSET = 0x00
+local PARTY_MON_OTID_OFFSET = 0x04
+local PARTY_MON_DATA_OFFSET = 0x20
+local PARTY_MON_HP_OFFSET = 0x56
+
+local SUBSTRUCT_ORDERS = {
+    {0, 1, 2, 3}, {0, 1, 3, 2}, {0, 2, 1, 3}, {0, 3, 1, 2},
+    {0, 2, 3, 1}, {0, 3, 2, 1}, {1, 0, 2, 3}, {1, 0, 3, 2},
+    {2, 0, 1, 3}, {3, 0, 1, 2}, {2, 0, 3, 1}, {3, 0, 2, 1},
+    {1, 2, 0, 3}, {1, 3, 0, 2}, {2, 1, 0, 3}, {3, 1, 0, 2},
+    {2, 3, 0, 1}, {3, 2, 0, 1}, {1, 2, 3, 0}, {1, 3, 2, 0},
+    {2, 1, 3, 0}, {3, 1, 2, 0}, {2, 3, 1, 0}, {3, 2, 1, 0},
+}
 
 local client = nil
 local frame = 0
@@ -68,6 +83,10 @@ local function read32(addr)
         + read8(addr + 3) * 0x1000000
 end
 
+local function read16(addr)
+    return read8(addr) + read8(addr + 1) * 0x100
+end
+
 local function saneSaveBlockAddress(addr)
     return addr and addr >= 0x02000000 and addr < 0x02040000
 end
@@ -81,6 +100,42 @@ local function badgeCount(saveBlock)
         end
     end
     return count
+end
+
+local function partyHpJson(partySize)
+    local parts = {}
+    local count = math.max(0, math.min(6, partySize))
+    for i = 0, count - 1 do
+        parts[#parts + 1] = tostring(read16(PLAYER_PARTY + i * PARTY_MON_SIZE + PARTY_MON_HP_OFFSET))
+    end
+    return "[" .. table.concat(parts, ",") .. "]"
+end
+
+local function growthSlot(personality)
+    local order = SUBSTRUCT_ORDERS[(personality % 24) + 1]
+    for slot = 1, 4 do
+        if order[slot] == 0 then
+            return slot - 1
+        end
+    end
+    return 0
+end
+
+local function partySpeciesJson(partySize)
+    local parts = {}
+    local count = math.max(0, math.min(6, partySize))
+    for i = 0, count - 1 do
+        local base = PLAYER_PARTY + i * PARTY_MON_SIZE
+        local personality = read32(base + PARTY_MON_PERSONALITY_OFFSET)
+        local otId = read32(base + PARTY_MON_OTID_OFFSET)
+        local key = personality ~ otId
+        local slot = growthSlot(personality)
+        local encrypted = read32(base + PARTY_MON_DATA_OFFSET + slot * 12)
+        local decrypted = encrypted ~ key
+        local species = decrypted % 0x10000
+        parts[#parts + 1] = tostring(species)
+    end
+    return "[" .. table.concat(parts, ",") .. "]"
 end
 
 local function makePayload()
@@ -103,10 +158,15 @@ local function makePayload()
         if partySize < 0 or partySize > 6 then
             partySize = ptrPartySize
         end
+        if partySize < 0 or partySize > 6 then
+            partySize = 0
+        end
+        local partyHp = partyHpJson(partySize)
+        local partySpecies = partySpeciesJson(partySize)
         local badges = badgeCount(ptrSaveBlock)
         return string.format(
-            '{"map_group":%d,"map_num":%d,"fixed_map_group":%d,"fixed_map_num":%d,"ptr_map_group":%d,"ptr_map_num":%d,"save_block1_ptr":%d,"party_size":%d,"global_party_size":%d,"ptr_party_size":%d,"fixed_party_size":%d,"badges":%d}\n',
-            ptrMapGroup, ptrMapNum, fixedMapGroup, fixedMapNum, ptrMapGroup, ptrMapNum, ptr, partySize, globalPartySize, ptrPartySize, fixedPartySize, badges
+            '{"map_group":%d,"map_num":%d,"fixed_map_group":%d,"fixed_map_num":%d,"ptr_map_group":%d,"ptr_map_num":%d,"save_block1_ptr":%d,"party_size":%d,"global_party_size":%d,"ptr_party_size":%d,"fixed_party_size":%d,"party_hp":%s,"party_species":%s,"badges":%d}\n',
+            ptrMapGroup, ptrMapNum, fixedMapGroup, fixedMapNum, ptrMapGroup, ptrMapNum, ptr, partySize, globalPartySize, ptrPartySize, fixedPartySize, partyHp, partySpecies, badges
         )
     end)
     if ok then

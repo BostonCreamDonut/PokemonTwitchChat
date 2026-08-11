@@ -141,6 +141,8 @@ class AutoGameStateServer:
         map_group, map_num = self.best_map_candidate(payload, current)
         badges = max(0, min(8, int(payload.get("badges", current.get("badges", 0)))))
         party_size = self.best_party_size(payload, current)
+        party_fainted = self.party_fainted(payload, party_size, current)
+        party_species = self.party_species(payload, party_size, current)
         location = self.map_names.get((map_group, map_num), current.get("location", "Unknown"))
         objective = current.get("objective", "Begin the adventure")
         if int(current.get("badges", badges)) != badges or objective in BADGE_OBJECTIVES:
@@ -149,6 +151,8 @@ class AutoGameStateServer:
             "location": location,
             "badges": badges,
             "party_size": party_size,
+            "party_fainted": party_fainted,
+            "party_species": party_species,
             "deaths": int(current.get("deaths", 0)),
             "objective": objective,
         }
@@ -197,6 +201,30 @@ class AutoGameStateServer:
         if candidates:
             return candidates[0]
         return current_size
+
+    def party_fainted(self, payload, party_size, current):
+        hp_values = payload.get("party_hp")
+        if not isinstance(hp_values, list):
+            return list(current.get("party_fainted", []))[:party_size]
+        fainted = []
+        for value in hp_values[:party_size]:
+            try:
+                fainted.append(int(value) <= 0)
+            except (TypeError, ValueError):
+                fainted.append(False)
+        return fainted
+
+    def party_species(self, payload, party_size, current):
+        species_values = payload.get("party_species")
+        if not isinstance(species_values, list):
+            return list(current.get("party_species", []))[:party_size]
+        species = []
+        for value in species_values[:party_size]:
+            try:
+                species.append(max(0, int(value)))
+            except (TypeError, ValueError):
+                species.append(0)
+        return species
 
 
 def main():
