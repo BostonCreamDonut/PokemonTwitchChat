@@ -133,6 +133,7 @@ class AutoGameStateServer:
         print(
             "Game state:",
             f"{state['location']} | badges={state['badges']} party={state['party_size']}",
+            f"species={state.get('party_species', [])}",
             f"raw={payload}",
         )
 
