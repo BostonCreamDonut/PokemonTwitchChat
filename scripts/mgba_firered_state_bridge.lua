@@ -9,6 +9,7 @@ local RECONNECT_EVERY_FRAMES = 180
 -- Pokemon FireRed US v1.0 symbols from pret/pokefirered.
 local SAVE_BLOCK_1 = 0x0202552C
 local SAVE_BLOCK_1_PTR = 0x03005008
+local PLAYER_PARTY_COUNT = 0x02024029
 local OFFSET_LOCATION = 0x0004
 local OFFSET_PARTY_COUNT = 0x0034
 local OFFSET_BADGE_FLAGS_BYTE = 0x0FE4
@@ -95,11 +96,17 @@ local function makePayload()
         local fixedMapNum = read8(SAVE_BLOCK_1 + OFFSET_LOCATION + 1)
         local ptrMapGroup = read8(ptrSaveBlock + OFFSET_LOCATION)
         local ptrMapNum = read8(ptrSaveBlock + OFFSET_LOCATION + 1)
-        local partySize = read8(ptrSaveBlock + OFFSET_PARTY_COUNT)
+        local ptrPartySize = read8(ptrSaveBlock + OFFSET_PARTY_COUNT)
+        local fixedPartySize = read8(SAVE_BLOCK_1 + OFFSET_PARTY_COUNT)
+        local globalPartySize = read8(PLAYER_PARTY_COUNT)
+        local partySize = globalPartySize
+        if partySize < 0 or partySize > 6 then
+            partySize = ptrPartySize
+        end
         local badges = badgeCount(ptrSaveBlock)
         return string.format(
-            '{"map_group":%d,"map_num":%d,"fixed_map_group":%d,"fixed_map_num":%d,"ptr_map_group":%d,"ptr_map_num":%d,"save_block1_ptr":%d,"party_size":%d,"badges":%d}\n',
-            ptrMapGroup, ptrMapNum, fixedMapGroup, fixedMapNum, ptrMapGroup, ptrMapNum, ptr, partySize, badges
+            '{"map_group":%d,"map_num":%d,"fixed_map_group":%d,"fixed_map_num":%d,"ptr_map_group":%d,"ptr_map_num":%d,"save_block1_ptr":%d,"party_size":%d,"global_party_size":%d,"ptr_party_size":%d,"fixed_party_size":%d,"badges":%d}\n',
+            ptrMapGroup, ptrMapNum, fixedMapGroup, fixedMapNum, ptrMapGroup, ptrMapNum, ptr, partySize, globalPartySize, ptrPartySize, fixedPartySize, badges
         )
     end)
     if ok then

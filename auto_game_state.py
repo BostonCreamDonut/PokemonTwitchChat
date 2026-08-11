@@ -140,7 +140,7 @@ class AutoGameStateServer:
         current = read_state(self.cfg)
         map_group, map_num = self.best_map_candidate(payload, current)
         badges = max(0, min(8, int(payload.get("badges", current.get("badges", 0)))))
-        party_size = max(0, min(6, int(payload.get("party_size", current.get("party_size", 1)))))
+        party_size = self.best_party_size(payload, current)
         location = self.map_names.get((map_group, map_num), current.get("location", "Unknown"))
         objective = current.get("objective", "Begin the adventure")
         if int(current.get("badges", badges)) != badges or objective in BADGE_OBJECTIVES:
@@ -177,6 +177,26 @@ class AutoGameStateServer:
                 return (-1, -1)
             return candidates[0]
         return (-1, -1)
+
+    def best_party_size(self, payload, current):
+        current_size = max(0, min(6, int(current.get("party_size", 1))))
+        candidates = []
+        for key in ("global_party_size", "party_size", "ptr_party_size", "fixed_party_size"):
+            try:
+                value = int(payload.get(key, -1))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= value <= 6:
+                candidates.append(value)
+
+        positive = [value for value in candidates if value > 0]
+        if positive:
+            return positive[0]
+        if current_size > 0:
+            return current_size
+        if candidates:
+            return candidates[0]
+        return current_size
 
 
 def main():
