@@ -57,13 +57,13 @@ The overlay does not render the game. OBS should still show mGBA as its own crop
 2. In mGBA, open `Tools -> Scripting`.
 3. Load `scripts/mgba_firered_state_bridge.lua`.
 
-When the bridge is loaded, Location, Badges, Party count, fainted party slots, and the badge-based Objective update automatically. Fainted Pokemon display as faded Pokeballs in the Party panel. This is configured for Pokemon FireRed US v1.0. If the values look wrong, disable `"auto_game_state.enabled"` in `config.json` and use the manual commands below.
+When the bridge is loaded, Location, Badges, Party count, fainted party slots, Deaths, and the badge-based Objective update automatically. Fainted Pokemon display faded in the Party panel, and Deaths increments once when a party slot changes from alive to fainted. This is configured for Pokemon FireRed US v1.0. If the values look wrong, disable `"auto_game_state.enabled"` in `config.json` and use the manual commands below.
 The terminal running `./run.sh` prints each accepted memory update, including raw map and party values, which helps diagnose ROM/address mismatches.
 
-Deaths are still manual because FireRed does not have a built-in death counter.
+Manual death commands remain available if you need to correct the counter during a stream.
 
 ## Manual game status
-The overlay reads live game status from `game_state.json`. Manual commands are still useful for deaths or quick corrections:
+The overlay reads live game status from `game_state.json`. Manual commands are still useful for quick corrections:
 
     python game_state.py location "Viridian City"
     python game_state.py badges 1

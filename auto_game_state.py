@@ -144,6 +144,7 @@ class AutoGameStateServer:
         party_size = self.best_party_size(payload, current)
         party_fainted = self.party_fainted(payload, party_size, current)
         party_species = self.party_species(payload, party_size, current)
+        deaths = self.death_count(current, party_fainted, party_species)
         location = self.map_names.get((map_group, map_num), current.get("location", "Unknown"))
         objective = current.get("objective", "Begin the adventure")
         if int(current.get("badges", badges)) != badges or objective in BADGE_OBJECTIVES:
@@ -154,7 +155,7 @@ class AutoGameStateServer:
             "party_size": party_size,
             "party_fainted": party_fainted,
             "party_species": party_species,
-            "deaths": int(current.get("deaths", 0)),
+            "deaths": deaths,
             "objective": objective,
         }
 
@@ -226,6 +227,35 @@ class AutoGameStateServer:
             except (TypeError, ValueError):
                 species.append(0)
         return species
+
+    def death_count(self, current, party_fainted, party_species):
+        deaths = max(0, int(current.get("deaths", 0)))
+        previous_fainted = current.get("party_fainted", [])
+        previous_species = current.get("party_species", [])
+        if not isinstance(previous_fainted, list) or not isinstance(party_fainted, list):
+            return deaths
+
+        for i, is_fainted in enumerate(party_fainted[:6]):
+            if not is_fainted or i >= len(previous_fainted):
+                continue
+            if bool(previous_fainted[i]):
+                continue
+            if not self.same_party_slot(previous_species, party_species, i):
+                continue
+            deaths += 1
+        return deaths
+
+    def same_party_slot(self, previous_species, party_species, index):
+        if not isinstance(previous_species, list) or not isinstance(party_species, list):
+            return True
+        if index >= len(previous_species) or index >= len(party_species):
+            return True
+        try:
+            prev = int(previous_species[index])
+            new = int(party_species[index])
+        except (TypeError, ValueError):
+            return True
+        return prev <= 0 or new <= 0 or prev == new
 
 
 def main():
