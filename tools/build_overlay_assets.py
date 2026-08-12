@@ -215,15 +215,124 @@ def make_skull_asset():
 
 
 def make_misc_icons():
-    house = Image.new("RGBA", (72, 72), (0, 0, 0, 0))
+    def new_icon():
+        return Image.new("RGBA", (72, 72), (0, 0, 0, 0))
+
+    def shadow(d):
+        d.ellipse((8, 58, 64, 68), fill=(99, 78, 50, 70))
+
+    def save_location(name, image):
+        image.save(HUD / f"location_{name}.png")
+
+    house = new_icon()
     d = ImageDraw.Draw(house)
-    d.rectangle((6, 54, 66, 66), fill=(37, 138, 50, 255))
+    shadow(d)
     d.rectangle((10, 34, 62, 64), fill=(239, 221, 174, 255), outline=INK, width=3)
     d.polygon([(8, 36), (36, 14), (66, 36)], fill=(220, 64, 38, 255), outline=INK)
     d.polygon([(18, 34), (36, 20), (56, 34)], fill=(255, 103, 55, 255))
     d.rectangle((20, 45, 32, 64), fill=(170, 75, 43, 255), outline=INK, width=2)
     d.rectangle((44, 43, 58, 53), fill=(94, 173, 217, 255), outline=INK, width=2)
-    house.save(HUD / "location_house.png")
+    save_location("house", house)
+
+    city = new_icon()
+    d = ImageDraw.Draw(city)
+    shadow(d)
+    d.rectangle((12, 30, 31, 63), fill=(233, 219, 174, 255), outline=INK, width=3)
+    d.rectangle((35, 22, 58, 63), fill=(212, 222, 225, 255), outline=INK, width=3)
+    d.rectangle((15, 20, 28, 30), fill=(211, 55, 42, 255), outline=INK, width=2)
+    d.rectangle((38, 14, 55, 22), fill=(63, 129, 203, 255), outline=INK, width=2)
+    for x in (17, 40, 50):
+        d.rectangle((x, 36, x + 7, 44), fill=(99, 176, 218, 255), outline=INK, width=1)
+    d.rectangle((43, 50, 51, 63), fill=(128, 87, 55, 255), outline=INK, width=1)
+    save_location("city", city)
+
+    route = new_icon()
+    d = ImageDraw.Draw(route)
+    shadow(d)
+    d.rectangle((30, 34, 36, 64), fill=(104, 73, 42, 255), outline=INK, width=2)
+    d.polygon([(13, 17), (55, 17), (63, 26), (55, 35), (13, 35), (7, 26)], fill=(236, 196, 91, 255), outline=INK)
+    d.line((18, 26, 50, 26), fill=(130, 84, 33, 255), width=4)
+    d.rectangle((8, 55, 22, 64), fill=(75, 162, 65, 255))
+    d.rectangle((50, 53, 65, 64), fill=(75, 162, 65, 255))
+    d.line((28, 64, 38, 64), fill=INK, width=3)
+    save_location("route", route)
+
+    forest = new_icon()
+    d = ImageDraw.Draw(forest)
+    shadow(d)
+    for cx, cy, scale, color in (
+        (21, 42, 1.0, (39, 132, 62, 255)),
+        (38, 35, 1.12, (45, 155, 71, 255)),
+        (53, 44, 0.9, (34, 116, 57, 255)),
+    ):
+        d.rectangle((cx - 4, cy + 9, cx + 4, 63), fill=(107, 78, 42, 255), outline=INK, width=1)
+        r = int(18 * scale)
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color, outline=INK, width=3)
+        d.ellipse((cx - r + 6, cy - r + 6, cx - 1, cy - 1), fill=(75, 183, 82, 255))
+    save_location("forest", forest)
+
+    cave = new_icon()
+    d = ImageDraw.Draw(cave)
+    shadow(d)
+    d.polygon([(8, 61), (17, 28), (33, 13), (51, 20), (65, 61)], fill=(117, 105, 91, 255), outline=INK)
+    d.polygon([(14, 61), (25, 35), (37, 22), (55, 61)], fill=(151, 139, 119, 255))
+    d.pieslice((24, 30, 52, 76), 180, 360, fill=(22, 24, 26, 255), outline=INK, width=2)
+    d.line((14, 61, 61, 61), fill=INK, width=3)
+    d.polygon([(19, 29), (32, 15), (28, 38)], fill=(189, 178, 151, 255))
+    save_location("cave", cave)
+
+    gym = new_icon()
+    d = ImageDraw.Draw(gym)
+    shadow(d)
+    d.rectangle((10, 35, 62, 64), fill=(226, 214, 177, 255), outline=INK, width=3)
+    d.polygon([(7, 35), (36, 15), (65, 35)], fill=(179, 48, 39, 255), outline=INK)
+    d.rectangle((18, 45, 54, 58), fill=(80, 76, 67, 255), outline=INK, width=2)
+    d.text((21, 42), "GYM", font=font(13), fill=(255, 245, 202, 255), stroke_width=1, stroke_fill=INK)
+    d.rectangle((31, 56, 41, 64), fill=(118, 76, 48, 255), outline=INK, width=1)
+    save_location("gym", gym)
+
+    center = new_icon()
+    d = ImageDraw.Draw(center)
+    shadow(d)
+    d.rectangle((10, 32, 62, 64), fill=(248, 240, 219, 255), outline=INK, width=3)
+    d.rectangle((14, 22, 58, 35), fill=(210, 45, 37, 255), outline=INK, width=2)
+    d.ellipse((26, 10, 46, 30), fill=(248, 248, 242, 255), outline=INK, width=2)
+    d.line((31, 20, 41, 20), fill=(210, 45, 37, 255), width=4)
+    d.line((36, 15, 36, 25), fill=(210, 45, 37, 255), width=4)
+    d.rectangle((30, 48, 42, 64), fill=(95, 147, 199, 255), outline=INK, width=2)
+    save_location("center", center)
+
+    mart = new_icon()
+    d = ImageDraw.Draw(mart)
+    shadow(d)
+    d.rectangle((10, 32, 62, 64), fill=(237, 232, 211, 255), outline=INK, width=3)
+    d.rectangle((14, 20, 58, 34), fill=(49, 127, 208, 255), outline=INK, width=2)
+    d.text((21, 19), "MART", font=font(11), fill=(255, 249, 224, 255), stroke_width=1, stroke_fill=INK)
+    d.rectangle((30, 48, 42, 64), fill=(95, 147, 199, 255), outline=INK, width=2)
+    d.rectangle((16, 42, 27, 51), fill=(99, 176, 218, 255), outline=INK, width=1)
+    d.rectangle((47, 42, 58, 51), fill=(99, 176, 218, 255), outline=INK, width=1)
+    save_location("mart", mart)
+
+    water = new_icon()
+    d = ImageDraw.Draw(water)
+    shadow(d)
+    d.rectangle((9, 46, 63, 63), fill=(69, 156, 215, 255), outline=INK, width=2)
+    for y in (48, 56):
+        d.arc((12, y - 6, 31, y + 6), 0, 180, fill=(166, 222, 245, 255), width=2)
+        d.arc((32, y - 6, 51, y + 6), 0, 180, fill=(166, 222, 245, 255), width=2)
+    d.polygon([(18, 43), (31, 22), (34, 43)], fill=(235, 238, 230, 255), outline=INK)
+    d.polygon([(34, 43), (52, 28), (54, 43)], fill=(215, 54, 41, 255), outline=INK)
+    d.rectangle((29, 17, 34, 45), fill=(99, 70, 42, 255), outline=INK, width=1)
+    save_location("water", water)
+
+    interior = new_icon()
+    d = ImageDraw.Draw(interior)
+    shadow(d)
+    d.rectangle((16, 16, 56, 64), fill=(180, 115, 68, 255), outline=INK, width=3)
+    d.rectangle((22, 23, 50, 64), fill=(121, 76, 48, 255), outline=INK, width=2)
+    d.ellipse((43, 42, 49, 48), fill=(245, 198, 74, 255), outline=INK, width=1)
+    d.rectangle((20, 12, 52, 18), fill=(205, 157, 82, 255), outline=INK, width=2)
+    save_location("interior", interior)
 
     flag = Image.new("RGBA", (48, 48), (0, 0, 0, 0))
     d = ImageDraw.Draw(flag)

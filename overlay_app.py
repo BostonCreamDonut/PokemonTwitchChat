@@ -304,6 +304,7 @@ class Overlay(QWidget):
         body = (22, 984, 296, 1066)
         icon_w, icon_h = 60, 60
         text = str(loc)
+        icon_name = self.location_icon_name(text)
         font_size = 26
         gap = 14
         max_text_w = body[2] - body[0] - icon_w - gap - 16
@@ -319,8 +320,32 @@ class Overlay(QWidget):
         group_w = icon_w + gap + text_w
         x = body[0] + (body[2] - body[0] - group_w) / 2
         cy = body[1] + (body[3] - body[1]) / 2
-        self.screen_sprite(p, "location_house", x, cy - icon_h / 2, icon_w, icon_h)
+        if not self.screen_sprite(p, icon_name, x, cy - icon_h / 2, icon_w, icon_h):
+            self.screen_sprite(p, "location_house", x, cy - icon_h / 2, icon_w, icon_h)
         self.screen_text(p, text, x + icon_w + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
+
+    def location_icon_name(self, location):
+        name = str(location).lower()
+        compact = name.replace(".", "").replace("'", "")
+        if any(word in compact for word in ("pokemon center", "poke center")):
+            return "location_center"
+        if any(word in compact for word in ("mart", "department store")):
+            return "location_mart"
+        if "gym" in compact:
+            return "location_gym"
+        if any(word in compact for word in ("forest", "berry forest", "pattern bush")):
+            return "location_forest"
+        if any(word in compact for word in ("cave", "mt moon", "rock tunnel", "seafoam", "victory road", "diglett", "ember spa")):
+            return "location_cave"
+        if any(word in compact for word in ("route", "road", "path", "bridge", "cape")):
+            return "location_route"
+        if any(word in compact for word in ("sea", "island", "isle", "water", "ferry", "ship", "ss anne", "harbor", "port")):
+            return "location_water"
+        if any(word in compact for word in ("house", "lab", "room", "floor", "tower", "mansion", "hideout", "building", "gate")):
+            return "location_interior"
+        if any(word in compact for word in ("city", "town", "plateau")):
+            return "location_city"
+        return "location_house"
 
     def draw_badges_panel(self, p, badges):
         count = max(0, min(8, int(badges)))
