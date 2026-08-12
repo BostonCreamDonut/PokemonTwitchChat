@@ -278,10 +278,10 @@ class Overlay(QWidget):
         st = OV.get("status", {})
         loc = self.state.get("location", st.get("location", "Pallet Town"))
         badges = int(self.state.get("badges", st.get("badges", 2)))
-        party = int(self.state.get("party_size", st.get("party_size", 3)))
+        party = int(self.state.get("party_size", st.get("party_size", 1)))
         party_fainted = self.state.get("party_fainted", [])
         party_species = self.state.get("party_species", [])
-        deaths = int(self.state.get("deaths", st.get("deaths", 3)))
+        deaths = int(self.state.get("deaths", st.get("deaths", 0)))
         objective = self.state.get("objective", st.get("objective", "Defeat Brock\nin Pewter City"))
 
         self.draw_location_panel(p, loc)
