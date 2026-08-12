@@ -395,11 +395,18 @@ class Overlay(QWidget):
 
     def draw_deaths_panel(self, p, deaths):
         body = (1324, 984, 1440, 1066)
-        text = str(deaths)
+        text = str(max(0, int(deaths)))
         font_size = 30
-        text_w, text_h = self.screen_text_size(p, text, font_size, True)
         skull_size = 48
-        gap = 14
+        gap = 10
+        max_group_w = body[2] - body[0] - 12
+        text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        while skull_size + gap + text_w > max_group_w and font_size > 18:
+            font_size -= 1
+            text_w, text_h = self.screen_text_size(p, text, font_size, True)
+        while skull_size + gap + text_w > max_group_w and skull_size > 36:
+            skull_size -= 2
+            text_w, text_h = self.screen_text_size(p, text, font_size, True)
         group_w = skull_size + gap + text_w
         x = body[0] + (body[2] - body[0] - group_w) / 2
         cy = body[1] + (body[3] - body[1]) / 2

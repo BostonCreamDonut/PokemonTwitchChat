@@ -382,6 +382,9 @@ class App:
     def run(self):
         ok,data=TokenValidator(self.token,CFG["twitch"]["bot_username"]).validate()
         if not ok:raise SystemExit(f"Token validation failed: {data}")
+        tmp=self.state_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.state()),encoding="utf-8")
+        tmp.replace(self.state_path)
         if CFG["overlay"].get("enabled", True):
             self.overlay_proc=subprocess.Popen([sys.executable,str(BASE/"overlay_app.py")],cwd=BASE)
         self.auto_game_state.start_thread()

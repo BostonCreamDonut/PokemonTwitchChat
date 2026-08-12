@@ -16,6 +16,10 @@ def state_path(cfg):
     return BASE / cfg["overlay"].get("game_state_file", "game_state.json")
 
 
+def overlay_state_path(cfg):
+    return BASE / cfg["overlay"].get("state_file", "overlay_state.json")
+
+
 def default_state(cfg):
     status = cfg["overlay"].get("status", {})
     return {
@@ -76,7 +80,33 @@ def write_state(state, cfg=None):
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
     tmp.write_text(json.dumps(clean, indent=2), encoding="utf-8")
     tmp.replace(path)
+    sync_overlay_state(clean, cfg)
     return clean
+
+
+def sync_overlay_state(updates, cfg=None):
+    cfg = cfg or load_config()
+    path = overlay_state_path(cfg)
+    if not path.exists():
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not isinstance(data, dict):
+        return
+
+    changed = False
+    for key in default_state(cfg):
+        if key in updates and data.get(key) != updates[key]:
+            data[key] = updates[key]
+            changed = True
+    if not changed:
+        return
+
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    tmp.replace(path)
 
 
 def update_state(updates, cfg=None):
