@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, math, sys, time
+import json, math, re, sys, time, urllib.request
 from pathlib import Path
 from PyQt5.QtCore import Qt, QTimer, QRectF, QPointF
 from PyQt5.QtGui import QColor, QFont, QFontDatabase, QPainter, QPen, QBrush, QPixmap, QPolygonF
@@ -15,6 +15,7 @@ BOOT = BASE / OV.get("boot_file", "boot_state.json")
 DIALOGUE = BASE / OV.get("dialogue_file", "dialogue_state.json")
 FRAME = BASE / OV["reference_frame"]
 HUD_DIR = BASE / "assets" / "ui" / "hud"
+EMOTE_DIR = BASE / "assets" / "cache" / "twitch_emotes"
 
 SRC_W = float(OV.get("source_width", 1672))
 SRC_H = float(OV.get("source_height", 941))
@@ -62,6 +63,8 @@ class Overlay(QWidget):
         self.sy = self.screen_h / SRC_H
         self.font_family = self.pick_font()
         self.hud = self.load_hud()
+        self.emotes = {}
+        EMOTE_DIR.mkdir(parents=True, exist_ok=True)
 
         self.setWindowTitle("Twitch Plays Pokemon Overlay")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
@@ -186,6 +189,60 @@ class Overlay(QWidget):
         p.setFont(self.screen_font(size, bold))
         return p.fontMetrics().elidedText(str(text), Qt.ElideRight, max(1, int(width)))
 
+    def chat_emote(self, provider, emote_id, url=None):
+        provider = re.sub(r"[^a-z0-9_-]", "_", str(provider or "emote").lower())
+        emote_id = str(emote_id)
+        if not emote_id:
+            return None
+        key = f"{provider}_{re.sub(r'[^A-Za-z0-9_-]', '_', emote_id)}"
+        if key in self.emotes:
+            return self.emotes[key]
+
+        path = EMOTE_DIR / f"{key}.bin"
+        if not path.exists():
+            if not url:
+                url = f"https://static-cdn.jtvnw.net/emoticons/v2/{emote_id}/default/dark/2.0"
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "PokemonTwitchChat/1.0"})
+                data = urllib.request.urlopen(req, timeout=1.5).read()
+                path.write_bytes(data)
+            except Exception:
+                self.emotes[key] = None
+                return None
+
+        pix = QPixmap()
+        try:
+            ok = pix.loadFromData(path.read_bytes())
+        except Exception:
+            ok = False
+        self.emotes[key] = pix if ok and not pix.isNull() else None
+        return self.emotes[key]
+
+    def chat_segments(self, message, emotes):
+        message = str(message)
+        if not isinstance(emotes, list):
+            emotes = []
+        segments = []
+        cursor = 0
+        for emote in sorted(emotes, key=lambda item: int(item.get("start", 0)) if isinstance(item, dict) else 0):
+            try:
+                start = int(emote.get("start"))
+                end = int(emote.get("end"))
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if start < cursor or start < 0 or end < start:
+                continue
+            if start > cursor:
+                segments.append({"type": "text", "text": message[cursor:start]})
+            segments.append({"type": "emote", "id": emote.get("id"), "text": message[start:end + 1]})
+            cursor = end + 1
+        if cursor < len(message):
+            segments.append({"type": "text", "text": message[cursor:]})
+        return segments or [{"type": "text", "text": message}]
+
+    def text_tokens(self, text):
+        return [part for part in re.findall(r"\S+\s*|\s+", str(text)) if part]
+
     def screen_rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
         p.setPen(QPen(border, max(1, int(round(bw)))))
         p.setBrush(QBrush(fill))
@@ -295,8 +352,10 @@ class Overlay(QWidget):
             yy += 24
 
     def draw_chat(self, p):
-        x, y, w = 1558, 648, 306
-        row_h = 21
+        x, y, w, bottom = 1558, 648, 306, 916
+        line_h = 19
+        emote_size = 18
+        gap = 4
         rows = list(reversed(self.state.get("recent_chat", [])))
         if not rows:
             rows = [
@@ -304,7 +363,6 @@ class Overlay(QWidget):
                 for row in self.state.get("recent_commands", [])
             ]
             rows = list(reversed(rows))
-        rows = rows[:13]
         palette = [
             QColor("#EF4B2F"), QColor("#E9AA17"), QColor("#45B73E"), QColor("#3DC5D9"),
             QColor("#A65ACC"), QColor("#F39E21"), QColor("#38B9D5"), QColor("#EF86B0")
@@ -312,23 +370,61 @@ class Overlay(QWidget):
         if not rows:
             self.screen_text(p, "No chat yet", x, y + 92, w, 22, 14, QColor("#6E7777"), False, Qt.AlignCenter)
             return
+
+        yy = y
         for i, row in enumerate(rows):
-            yy = y + i * row_h
-            if i % 2 == 0:
-                p.setPen(Qt.NoPen)
-                p.setBrush(QColor("#161C1D"))
-                p.drawRect(QRectF(x - 6, yy + 1, w + 12, row_h - 2))
-            name = str(row.get("username", ""))[:13]
+            if yy + line_h > bottom:
+                break
+            name = str(row.get("username", ""))[:14]
             sub = bool(row.get("subscriber"))
-            display = ("SUB " if sub else "") + name
+            display = ("SUB " if sub else "") + name + ":"
             col = GOLD if sub else palette[sum(ord(ch) for ch in name) % len(palette)]
-            message = str(row.get("message", row.get("command", ""))).strip()
-            label = self.screen_elided(p, display + ":", 108, 13, sub)
-            label_w, _ = self.screen_text_size(p, label, 13, sub)
-            msg_x = x + label_w + 7
-            shown = self.screen_elided(p, message, x + w - msg_x, 13, False)
-            self.screen_text(p, label, x, yy, label_w + 2, row_h, 13, col, sub)
-            self.screen_text(p, shown, msg_x, yy, x + w - msg_x, row_h, 13, WHITE, False)
+            label = self.screen_elided(p, display, 118, 12, sub)
+            label_w, _ = self.screen_text_size(p, label, 12, sub)
+            msg_start_x = x + label_w + 6
+            cursor_x = msg_start_x
+            max_x = x + w
+
+            self.screen_text(p, label, x, yy, label_w + 2, line_h, 12, col, sub)
+
+            for segment in self.chat_segments(row.get("message", row.get("command", "")), row.get("emotes", [])):
+                if segment["type"] == "emote":
+                    token_w = emote_size + gap
+                    if cursor_x + token_w > max_x:
+                        yy += line_h
+                        cursor_x = msg_start_x
+                        if yy + line_h > bottom:
+                            break
+                    pix = self.chat_emote(segment.get("provider"), segment.get("id"), segment.get("url"))
+                    if pix:
+                        p.drawPixmap(QRectF(cursor_x, yy + 1, emote_size, emote_size), pix, QRectF(0, 0, pix.width(), pix.height()))
+                    else:
+                        fallback = self.screen_elided(p, segment.get("text", ""), max_x - cursor_x, 12, False)
+                        self.screen_text(p, fallback, cursor_x, yy, max_x - cursor_x, line_h, 12, WHITE, False)
+                    cursor_x += token_w
+                    continue
+
+                for token in self.text_tokens(segment.get("text", "")):
+                    token_w, _ = self.screen_text_size(p, token, 12, False)
+                    if cursor_x + token_w > max_x and token.strip():
+                        yy += line_h
+                        cursor_x = msg_start_x
+                        if yy + line_h > bottom:
+                            break
+                        token = token.lstrip()
+                        token_w, _ = self.screen_text_size(p, token, 12, False)
+                    if yy + line_h > bottom:
+                        break
+                    if token_w > max_x - cursor_x:
+                        token = self.screen_elided(p, token, max_x - cursor_x, 12, False)
+                        token_w, _ = self.screen_text_size(p, token, 12, False)
+                    self.screen_text(p, token, cursor_x, yy, token_w + 2, line_h, 12, WHITE, False)
+                    cursor_x += token_w
+
+                if yy + line_h > bottom:
+                    break
+
+            yy += line_h + 3
 
     def draw_bottom(self, p):
         st = OV.get("status", {})

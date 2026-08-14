@@ -9,6 +9,7 @@ dialogue_state.json
 __pycache__/
 *.pyc
 assets/ui/mockups/
+assets/cache/twitch_emotes/
 assets/ui/hud/pokemon_icons_test.png
 assets/ui/party_icon_preview.png
 assets/ui/location_icon_preview.png

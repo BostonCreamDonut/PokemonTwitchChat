@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, logging, random, signal, subprocess, sys, threading, time
+import json, logging, random, re, signal, subprocess, sys, threading, time, urllib.error, urllib.request
 from collections import Counter
 from pathlib import Path
 
@@ -48,6 +48,80 @@ def is_admin(user, tags):
         or "broadcaster/" in badges
     )
 
+def parse_twitch_emotes(message, raw):
+    emotes = []
+    if not raw:
+        return emotes
+    for part in raw.split("/"):
+        if ":" not in part:
+            continue
+        emote_id, ranges = part.split(":", 1)
+        for span in ranges.split(","):
+            if "-" not in span:
+                continue
+            try:
+                start, end = (int(value) for value in span.split("-", 1))
+            except ValueError:
+                continue
+            text = message[start:end + 1]
+            if text:
+                emotes.append({"provider": "twitch", "id": emote_id, "start": start, "end": end, "text": text})
+    return sorted(emotes, key=lambda item: item["start"])
+
+def fetch_json(url, timeout=5):
+    req = urllib.request.Request(url, headers={"User-Agent": "PokemonTwitchChat/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+def add_emote(out, code, provider, emote_id, url):
+    code = str(code or "").strip()
+    if not code or not url:
+        return
+    out[code] = {"provider": provider, "id": str(emote_id), "url": url}
+
+def ffz_url(urls):
+    if not isinstance(urls, dict):
+        return ""
+    url = urls.get("2") or urls.get("1") or urls.get("4")
+    if not url:
+        return ""
+    return "https:" + url if url.startswith("//") else url
+
+def parse_ffz_sets(data):
+    out = {}
+    for emote_set in data.get("sets", {}).values():
+        for emote in emote_set.get("emoticons", []):
+            add_emote(out, emote.get("name"), "ffz", emote.get("id"), ffz_url(emote.get("urls")))
+    return out
+
+def seven_tv_url(emote):
+    data = emote.get("data") or emote
+    host = data.get("host", {})
+    base = host.get("url", "")
+    if base.startswith("//"):
+        base = "https:" + base
+    if not base:
+        return ""
+    files = host.get("files", [])
+    preferred = ("2x_static.gif", "1x_static.gif", "2x_static.webp", "1x_static.webp", "2x.gif", "1x.gif")
+    by_name = {item.get("name"): item for item in files}
+    by_static = {item.get("static_name"): item for item in files if item.get("static_name")}
+    for name in preferred:
+        if name in by_static:
+            return f"{base}/{by_static[name]['static_name']}"
+        if name in by_name:
+            return f"{base}/{by_name[name]['name']}"
+    if files and files[0].get("name"):
+        return f"{base}/{files[0]['name']}"
+    return ""
+
+def parse_seven_tv_set(data):
+    out = {}
+    emote_set = data.get("emote_set") if isinstance(data.get("emote_set"), dict) else data
+    for emote in emote_set.get("emotes", []):
+        add_emote(out, emote.get("name"), "7tv", emote.get("id"), seven_tv_url(emote))
+    return out
+
 class App:
     def __init__(self, token):
         self.token=token
@@ -67,6 +141,8 @@ class App:
         self.votes=Counter(); self.raw=Counter(); self.user_votes={}; self.order={}; self.seq=0
         self.recent=[]; self.chat_log=[]; self.last_winner=None; self.total_votes=0; self.total_weighted=0
         self.players=set(); self.rounds=0; self.effects={}
+        self.third_party_emotes={}
+        self.third_party_emote_loads=set()
 
         self.state_path=BASE/CFG["overlay"]["state_file"]
         self.game_state_path=BASE/CFG["overlay"].get("game_state_file","game_state.json")
@@ -82,6 +158,7 @@ class App:
             tw["bot_username"],token,tw["channel"],
             self.on_message,self.on_notice,STOP
         )
+        self.start_third_party_emote_load()
 
     def boot_sequence(self):
         if not CFG["stream_system"].get("show_boot_sequence",True):
@@ -172,13 +249,103 @@ class App:
             cmd={"!up":"!down","!down":"!up","!left":"!right","!right":"!left"}.get(cmd,cmd)
         return self.controls[cmd]
 
+    def start_third_party_emote_load(self, room_id=None):
+        key = str(room_id or "global")
+        with self.lock:
+            if key in self.third_party_emote_loads:
+                return
+            self.third_party_emote_loads.add(key)
+        threading.Thread(target=self.load_third_party_emotes, args=(room_id,), daemon=True).start()
+
+    def load_third_party_emotes(self, room_id=None):
+        loaded = {}
+        jobs = []
+        if room_id:
+            jobs.extend([
+                ("bttv-channel", f"https://api.betterttv.net/3/cached/users/twitch/{room_id}"),
+                ("7tv-channel", f"https://7tv.io/v3/users/twitch/{room_id}"),
+                ("ffz-room", f"https://api.frankerfacez.com/v1/room/{CFG['twitch']['channel']}"),
+            ])
+        else:
+            jobs.extend([
+                ("bttv-global", "https://api.betterttv.net/3/cached/emotes/global"),
+                ("7tv-global", "https://7tv.io/v3/emote-sets/global"),
+                ("ffz-global", "https://api.frankerfacez.com/v1/set/global"),
+            ])
+
+        for kind, url in jobs:
+            try:
+                data = fetch_json(url)
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    log.info("Could not load %s emotes: HTTP %s", kind, e.code)
+                continue
+            except Exception as e:
+                log.info("Could not load %s emotes: %s", kind, e)
+                continue
+
+            if kind.startswith("bttv"):
+                if isinstance(data, list):
+                    emotes = data
+                else:
+                    emotes = data.get("channelEmotes", []) + data.get("sharedEmotes", [])
+                for emote in emotes:
+                    add_emote(loaded, emote.get("code"), "bttv", emote.get("id"), f"https://cdn.betterttv.net/emote/{emote.get('id')}/2x")
+            elif kind.startswith("ffz"):
+                loaded.update(parse_ffz_sets(data))
+            elif kind.startswith("7tv"):
+                loaded.update(parse_seven_tv_set(data))
+
+        if loaded:
+            with self.lock:
+                self.third_party_emotes.update(loaded)
+            log.info("Loaded %s third-party emotes%s", len(loaded), f" for room {room_id}" if room_id else "")
+
+    def parse_third_party_emotes(self, message, taken):
+        with self.lock:
+            emote_map = dict(self.third_party_emotes)
+        if not emote_map:
+            return []
+
+        out = []
+        for match in re.finditer(r"\S+", message):
+            code = match.group(0)
+            meta = emote_map.get(code)
+            if not meta:
+                continue
+            start, end = match.start(), match.end() - 1
+            if any(not (end < used_start or start > used_end) for used_start, used_end in taken):
+                continue
+            out.append({
+                "provider": meta["provider"],
+                "id": meta["id"],
+                "url": meta["url"],
+                "start": start,
+                "end": end,
+                "text": code,
+            })
+            taken.append((start, end))
+        return out
+
     def on_message(self,user,msg,tags):
         if tags.get("bits"):
             try:self.handle_cheer(user,int(tags["bits"]))
             except ValueError:pass
 
+        room_id = tags.get("room-id")
+        if room_id:
+            self.start_third_party_emote_load(room_id)
+        twitch_emotes = parse_twitch_emotes(msg, tags.get("emotes", ""))
+        taken = [(emote["start"], emote["end"]) for emote in twitch_emotes]
+        all_emotes = sorted(twitch_emotes + self.parse_third_party_emotes(msg, taken), key=lambda item: item["start"])
+        display_name = tags.get("display-name") or user
         with self.lock:
-            self.chat_log.append({"username":user,"message":msg,"subscriber":is_sub(tags)})
+            self.chat_log.append({
+                "username": display_name,
+                "message": msg,
+                "subscriber": is_sub(tags),
+                "emotes": all_emotes,
+            })
             self.chat_log=self.chat_log[-80:]
 
         # lightweight built-in commands
