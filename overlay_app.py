@@ -226,7 +226,7 @@ class Overlay(QWidget):
 
     def draw_votes(self, p):
         rows = self.state.get("votes", [])[:5]
-        rem = float(self.state.get("time_remaining", 3.0))
+        progress = max(0.0, min(1.0, float(self.state.get("round_progress", 0.0))))
 
         if not rows:
             self.screen_text(p, "Waiting for votes...", 1564, 355, 310, 24, 14, QColor("#68645D"), False, Qt.AlignCenter)
@@ -255,10 +255,11 @@ class Overlay(QWidget):
         self.screen_text(p, f"Total Weighted Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
                          1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
 
-        self.screen_rounded(p, 1700, 196, 52, 24, QColor("#B53022"), QColor("#8E261B"), 4, 1)
-        self.screen_text(p, f"{rem:.1f}s", 1700, 196, 52, 24, 12, WHITE, True, Qt.AlignCenter)
+        self.screen_rounded(p, 1588, 196, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
+        if progress > 0:
+            self.screen_rounded(p, 1589, 197, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
 
-    def draw_chat(self, p):
+    def draw_chat_legacy(self, p):
         yy = 555
         rows = list(reversed(self.state.get("recent_commands", [])))[:9]
         palette = [
@@ -273,6 +274,32 @@ class Overlay(QWidget):
             self.text(p, display + ":", 1338, yy, 145, 20, 8, col, sub)
             self.text(p, row.get("command", ""), 1488, yy, 90, 20, 8, WHITE, True)
             yy += 24
+
+    def draw_chat(self, p):
+        x, y, w = 1558, 648, 300
+        row_h = 24
+        rows = list(reversed(self.state.get("recent_commands", [])))[:8]
+        palette = [
+            QColor("#EF4B2F"), QColor("#E9AA17"), QColor("#45B73E"), QColor("#3DC5D9"),
+            QColor("#A65ACC"), QColor("#F39E21"), QColor("#38B9D5"), QColor("#EF86B0")
+        ]
+        if not rows:
+            self.screen_text(p, "No chat commands yet", x, y + 62, w, 22, 14, QColor("#6E7777"), False, Qt.AlignCenter)
+            return
+        for i, row in enumerate(rows):
+            yy = y + i * row_h
+            if i % 2 == 0:
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor("#161C1D"))
+                p.drawRect(QRectF(x - 6, yy + 1, w + 12, row_h - 2))
+            name = str(row.get("username", ""))[:14]
+            sub = bool(row.get("subscriber"))
+            display = ("SUB " if sub else "") + name
+            col = GOLD if sub else palette[sum(ord(ch) for ch in name) % len(palette)]
+            cmd = str(row.get("command", ""))
+            shown = LABELS.get(cmd, cmd).upper()
+            self.screen_text(p, display + ":", x, yy, 176, row_h, 14, col, sub)
+            self.screen_text(p, shown, x + 184, yy, 112, row_h, 14, WHITE, True, Qt.AlignRight | Qt.AlignVCenter)
 
     def draw_bottom(self, p):
         st = OV.get("status", {})
@@ -294,11 +321,10 @@ class Overlay(QWidget):
         top = self.state.get("top_trainers", [])
         top_name = str(top[0]["username"] if top else "pikafan23")[:16]
         top_lvl = top[0]["level"] if top else 38
-        total_trainers = int(self.state.get("unique_players", 1248))
-        longest_streak = int(self.state.get("longest_streak", 27))
+        total_trainers = int(self.state.get("unique_players", 0))
+        total_rounds = int(self.state.get("total_rounds", 0))
         self.screen_text(p, f"TOP: {top_name} Lv.{top_lvl}", 18, 878, 285, 24, 15, WHITE, True, Qt.AlignCenter)
-        self.screen_text(p, f"STREAK: {longest_streak}", 18, 908, 285, 24, 15, WHITE, True, Qt.AlignCenter)
-        self.screen_text(p, f"TRAINERS: {total_trainers:,}", 1558, 893, 330, 24, 15, WHITE, True, Qt.AlignCenter)
+        self.screen_text(p, f"TRAINERS: {total_trainers:,}   ROUNDS: {total_rounds:,}", 18, 908, 285, 24, 14, WHITE, True, Qt.AlignCenter)
 
     def draw_location_panel(self, p, loc):
         body = (22, 984, 296, 1066)
