@@ -182,6 +182,10 @@ class Overlay(QWidget):
         metrics = p.fontMetrics()
         return metrics.horizontalAdvance(str(t)), metrics.height()
 
+    def screen_elided(self, p, text, width, size=12, bold=False):
+        p.setFont(self.screen_font(size, bold))
+        return p.fontMetrics().elidedText(str(text), Qt.ElideRight, max(1, int(width)))
+
     def screen_rounded(self, p, x, y, w, h, fill, border=RED, r=6, bw=2):
         p.setPen(QPen(border, max(1, int(round(bw)))))
         p.setBrush(QBrush(fill))
@@ -222,7 +226,22 @@ class Overlay(QWidget):
 
         # Live Chat body
         p.setBrush(DARK)
-        p.drawRect(QRectF(1548, 637, 330, 226))
+        p.drawRect(QRectF(1548, 637, 362, 292))
+        p.setBrush(QColor("#D69A3B"))
+        p.drawRoundedRect(QRectF(1882, 651, 13, 250), 6, 6)
+        p.setBrush(QColor("#A26514"))
+        arrow = QPolygonF([
+            QPointF(1888.5, 915),
+            QPointF(1880.5, 904),
+            QPointF(1896.5, 904),
+        ])
+        p.drawPolygon(arrow)
+        p.setBrush(QColor("#E09C14"))
+        p.drawRect(QRectF(1548, 927, 362, 2))
+        p.drawRect(QRectF(1548, 637, 2, 292))
+        p.drawRect(QRectF(1908, 637, 2, 292))
+        p.setBrush(QColor("#B42B1F"))
+        p.drawRect(QRectF(1548, 924, 362, 2))
 
     def draw_votes(self, p):
         rows = self.state.get("votes", [])[:5]
@@ -255,9 +274,9 @@ class Overlay(QWidget):
         self.screen_text(p, f"Total Weighted Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
                          1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
 
-        self.screen_rounded(p, 1588, 196, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
+        self.screen_rounded(p, 1588, 224, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
         if progress > 0:
-            self.screen_rounded(p, 1589, 197, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
+            self.screen_rounded(p, 1589, 225, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
 
     def draw_chat_legacy(self, p):
         yy = 555
@@ -276,15 +295,22 @@ class Overlay(QWidget):
             yy += 24
 
     def draw_chat(self, p):
-        x, y, w = 1558, 648, 300
-        row_h = 24
-        rows = list(reversed(self.state.get("recent_commands", [])))[:8]
+        x, y, w = 1558, 648, 306
+        row_h = 21
+        rows = list(reversed(self.state.get("recent_chat", [])))
+        if not rows:
+            rows = [
+                {"username": row.get("username", ""), "message": row.get("command", ""), "subscriber": row.get("subscriber", False)}
+                for row in self.state.get("recent_commands", [])
+            ]
+            rows = list(reversed(rows))
+        rows = rows[:13]
         palette = [
             QColor("#EF4B2F"), QColor("#E9AA17"), QColor("#45B73E"), QColor("#3DC5D9"),
             QColor("#A65ACC"), QColor("#F39E21"), QColor("#38B9D5"), QColor("#EF86B0")
         ]
         if not rows:
-            self.screen_text(p, "No chat commands yet", x, y + 62, w, 22, 14, QColor("#6E7777"), False, Qt.AlignCenter)
+            self.screen_text(p, "No chat yet", x, y + 92, w, 22, 14, QColor("#6E7777"), False, Qt.AlignCenter)
             return
         for i, row in enumerate(rows):
             yy = y + i * row_h
@@ -292,14 +318,17 @@ class Overlay(QWidget):
                 p.setPen(Qt.NoPen)
                 p.setBrush(QColor("#161C1D"))
                 p.drawRect(QRectF(x - 6, yy + 1, w + 12, row_h - 2))
-            name = str(row.get("username", ""))[:14]
+            name = str(row.get("username", ""))[:13]
             sub = bool(row.get("subscriber"))
             display = ("SUB " if sub else "") + name
             col = GOLD if sub else palette[sum(ord(ch) for ch in name) % len(palette)]
-            cmd = str(row.get("command", ""))
-            shown = LABELS.get(cmd, cmd).upper()
-            self.screen_text(p, display + ":", x, yy, 176, row_h, 14, col, sub)
-            self.screen_text(p, shown, x + 184, yy, 112, row_h, 14, WHITE, True, Qt.AlignRight | Qt.AlignVCenter)
+            message = str(row.get("message", row.get("command", ""))).strip()
+            label = self.screen_elided(p, display + ":", 108, 13, sub)
+            label_w, _ = self.screen_text_size(p, label, 13, sub)
+            msg_x = x + label_w + 7
+            shown = self.screen_elided(p, message, x + w - msg_x, 13, False)
+            self.screen_text(p, label, x, yy, label_w + 2, row_h, 13, col, sub)
+            self.screen_text(p, shown, msg_x, yy, x + w - msg_x, row_h, 13, WHITE, False)
 
     def draw_bottom(self, p):
         st = OV.get("status", {})

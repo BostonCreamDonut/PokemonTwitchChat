@@ -65,7 +65,7 @@ class App:
         self.vote_window=self.base_window
         self.round_end=time.monotonic()+self.vote_window
         self.votes=Counter(); self.raw=Counter(); self.user_votes={}; self.order={}; self.seq=0
-        self.recent=[]; self.last_winner=None; self.total_votes=0; self.total_weighted=0
+        self.recent=[]; self.chat_log=[]; self.last_winner=None; self.total_votes=0; self.total_weighted=0
         self.players=set(); self.rounds=0; self.effects={}
 
         self.state_path=BASE/CFG["overlay"]["state_file"]
@@ -176,6 +176,10 @@ class App:
         if tags.get("bits"):
             try:self.handle_cheer(user,int(tags["bits"]))
             except ValueError:pass
+
+        with self.lock:
+            self.chat_log.append({"username":user,"message":msg,"subscriber":is_sub(tags)})
+            self.chat_log=self.chat_log[-80:]
 
         # lightweight built-in commands
         low=msg.strip().lower()
@@ -354,6 +358,7 @@ class App:
                 "round_weighted_vote_count":total,
                 "round_player_count":len(self.user_votes),
                 "recent_commands":self.recent[-7:],
+                "recent_chat":self.chat_log[-14:],
                 "last_winner":self.last_winner,
                 "unique_players":len(self.players),
                 "total_votes":self.total_votes,
