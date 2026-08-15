@@ -39,7 +39,6 @@ ALERT_CARD_EFFECTS = {
     "double_votes",
     "speed_round",
     "chaos",
-    "anarchy",
     "reverse_controls",
     "king_mode",
 }
@@ -648,18 +647,16 @@ class Overlay(QWidget):
         return 1 + c3 * t * t * t + c1 * t * t
 
     def draw_effect_card_alert(self, p, pix, effect, elapsed, dur, intro, outro, alpha):
-        base_w = 520
+        base_w = float(OV.get("alert_card_width", 440))
         base_h = base_w * pix.height() / max(1, pix.width())
         pop = self.ease_out_back(elapsed / .42)
-        pulse_rate = 3.8 if effect in ("chaos", "anarchy") else 2.2
+        pulse_rate = 3.8 if effect == "chaos" else 2.2
         pulse = 1 + math.sin(elapsed * math.pi * pulse_rate) * .012
         scale = (0.84 + .16 * pop) * pulse * (1 - .04 * outro)
         w, h = base_w * scale, base_h * scale
         shake = 0
         if effect == "chaos":
             shake = math.sin(elapsed * 42) * 5 + math.sin(elapsed * 21) * 2
-        elif effect == "anarchy":
-            shake = math.sin(elapsed * 34) * 3
         x = (SRC_W - w) / 2
         y = 132 + (1 - intro) * -42 + math.sin(elapsed * 3.5) * 2 + shake
         if outro:
@@ -672,7 +669,6 @@ class Overlay(QWidget):
             "double_votes": QColor(255, 208, 62, 44),
             "speed_round": QColor(68, 176, 255, 50),
             "chaos": QColor(202, 38, 30, 54),
-            "anarchy": QColor(255, 83, 18, 52),
             "reverse_controls": QColor(150, 98, 235, 48),
             "king_mode": QColor(255, 191, 38, 52),
         }.get(effect, QColor(255, 83, 18, 42))
@@ -706,7 +702,7 @@ class Overlay(QWidget):
                 p.drawLine(QPointF(self.tx(xx), self.ty(yy)), QPointF(self.tx(xx + 130), self.ty(yy - 8)))
             p.setPen(Qt.NoPen)
 
-        particle_count = 18 if effect in ("king_mode", "anarchy", "chaos") else 12
+        particle_count = 18 if effect in ("king_mode", "chaos") else 12
         for i in range(particle_count):
             phase = (elapsed * (.28 + i * .017) + i * .137) % 1
             sx = x + 36 + ((i * 37) % max(1, int(w - 72)))

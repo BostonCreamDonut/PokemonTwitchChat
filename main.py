@@ -200,12 +200,12 @@ class App:
     def activate_effect(self,effect,duration,user="",amount=0):
         self.effects[effect]={"end":time.monotonic()+duration,"source":user,"amount":amount}
         labels={"double_votes":"DOUBLE VOTES","speed_round":"SPEED ROUND","chaos":"CHAOS MODE",
-                "anarchy":"ANARCHY MODE","reverse_controls":"REVERSE CONTROLS",
+                "reverse_controls":"REVERSE CONTROLS",
                 "king_mode":"KING MODE"}
         sound={"double_votes":"double_votes.wav","speed_round":"speed_round.wav",
-               "chaos":"chaos.wav","anarchy":"anarchy.wav",
+               "chaos":"chaos.wav",
                "reverse_controls":"reverse_controls.wav",
-               "king_mode":"anarchy.wav"}.get(effect)
+               "king_mode":"gym_win.wav"}.get(effect)
         subtitle=f"Active for {int(duration)} seconds"
         if effect=="king_mode" and user:
             subtitle=f"{user} is king for {int(duration)} seconds"
@@ -221,8 +221,7 @@ class App:
         dialogue={
             "double_votes":("Professor Oak","The trainers are fired up! Everyone's vote power has doubled!"),
             "speed_round":("Bike Shop","Hold on tight! Voting just got a whole lot faster!"),
-            "chaos":("Team Rocket","Prepare for trouble! Every winning move gets an extra A press!"),
-            "anarchy":("Rival","Forget voting—every command goes through right now!"),
+            "chaos":("Team Rocket","Prepare for trouble! Every command goes through right now!"),
             "reverse_controls":("Psychic Trainer","Your sense of direction feels... backwards."),
             "king_mode":("Elite Trainer",f"{user} is king now. Hold on tight!")
         }.get(effect)
@@ -413,7 +412,7 @@ class App:
         w=self.weight(tags)
         self.db.record_vote(user,w,CFG["stream_system"]["trainer_xp_per_vote"])
 
-        if self.effect_active("anarchy"):
+        if self.effect_active("chaos"):
             self.controller.press(self.mapped_key(cmd))
             with self.lock:
                 self.recent.append({"username":user,"command":cmd,"subscriber":is_sub(tags),"weight":w})
@@ -506,8 +505,6 @@ class App:
                 self.round_end=time.monotonic()+self.vote_window
             if winner:
                 self.controller.press(self.mapped_key(winner))
-                if self.effect_active("chaos"):
-                    time.sleep(.05); self.controller.press(self.controls["!a"])
 
     def gym_worker(self):
         ss=CFG["stream_system"]
@@ -565,7 +562,7 @@ class App:
             rem=max(0,self.round_end-time.monotonic())
             return {
                 "connected":self.chat.connected,
-                "mode":"KING MODE" if self.king_mode_owner() else "ANARCHY" if self.effect_active("anarchy") else "DEMOCRACY",
+                "mode":"KING MODE" if self.king_mode_owner() else "CHAOS" if self.effect_active("chaos") else "DEMOCRACY",
                 "time_remaining":rem,
                 "round_progress":1-rem/self.vote_window if self.vote_window else 1,
                 "votes":rows,

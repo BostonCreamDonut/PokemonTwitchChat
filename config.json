@@ -53,12 +53,6 @@
         "label": "CHAOS MODE"
       },
       {
-        "minimum_bits": 1500,
-        "effect": "anarchy",
-        "duration_seconds": 60,
-        "label": "ANARCHY MODE"
-      },
-      {
         "minimum_bits": 2000,
         "effect": "reverse_controls",
         "duration_seconds": 60,
@@ -92,6 +86,7 @@
     "right_panel_width": 245,
     "header_height": 66,
     "theme_file": "theme_firered.json",
+    "alert_card_width": 440,
     "trainer_card_seconds": 6.0,
     "boot_file": "boot_state.json",
     "dialogue_file": "dialogue_state.json",
