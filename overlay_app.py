@@ -43,6 +43,11 @@ ALERT_CARD_EFFECTS = {
     "reverse_controls",
     "king_mode",
 }
+ALERT_CARD_KINDS = {
+    "subscriber": "subscriber_card",
+    "gift_sub": "gift_sub_card",
+    "resub": "resub_card",
+}
 
 LABELS = {
     "!up":"UP","!down":"DOWN","!left":"LEFT","!right":"RIGHT",
@@ -643,7 +648,8 @@ class Overlay(QWidget):
         return 1 + c3 * t * t * t + c1 * t * t
 
     def draw_effect_card_alert(self, p, pix, effect, elapsed, dur, intro, outro, alpha):
-        base_w, base_h = 520, 362
+        base_w = 520
+        base_h = base_w * pix.height() / max(1, pix.width())
         pop = self.ease_out_back(elapsed / .42)
         pulse_rate = 3.8 if effect in ("chaos", "anarchy") else 2.2
         pulse = 1 + math.sin(elapsed * math.pi * pulse_rate) * .012
@@ -741,9 +747,16 @@ class Overlay(QWidget):
                 self.draw_effect_card_alert(p, pix, effect, elapsed, dur, intro, outro, alpha)
                 return
 
+        kind = self.event.get("kind", "")
+        card_name = ALERT_CARD_KINDS.get(kind)
+        if card_name:
+            pix = self.alert_cards.get(card_name)
+            if pix:
+                self.draw_effect_card_alert(p, pix, kind, elapsed, dur, intro, outro, alpha)
+                return
+
         w, h = 510, 102
         x, y = 542, 168 + (1 - intro) * -35 + bounce
-        kind = self.event.get("kind", "")
         if kind == "subscriber":
             border = QColor(198, 55, 37, alpha); fill = QColor(250, 244, 226, alpha); title = QColor(183, 48, 37, alpha)
         elif kind == "gift_sub":
