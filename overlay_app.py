@@ -693,12 +693,20 @@ class Overlay(QWidget):
         base_w = float(OV.get("alert_card_width", 440))
         base_h = base_w * pix.height() / max(1, pix.width())
         pop = self.ease_out_back(elapsed / .42)
-        scale = 0.84 + .16 * pop
+        pulse_rate = 3.8 if effect == "chaos" else 2.2
+        pulse = 1 + math.sin(elapsed * math.pi * pulse_rate) * .012
+        scale = (0.84 + .16 * pop) * pulse * (1 - .04 * outro)
         w, h = base_w * scale, base_h * scale
+        shake = 0
+        if effect == "chaos":
+            shake = math.sin(elapsed * 42) * 5 + math.sin(elapsed * 21) * 2
         x = (SRC_W - w) / 2
-        y = 132 + (1 - intro) * -42
+        y = 132 + (1 - intro) * -42 + math.sin(elapsed * 3.5) * 2 + shake
         if outro:
             y -= 24 * outro
+        text_w, text_h = base_w, base_h
+        text_x = (SRC_W - text_w) / 2
+        text_y = 132
         target = QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h))
 
         p.save()
@@ -712,6 +720,7 @@ class Overlay(QWidget):
         self.rounded(p, x - 10, y + 12, w + 20, h - 8, glow, QColor(255, 167, 32, 80), 10, 1)
         p.drawPixmap(target, pix, QRectF(0, 0, pix.width(), pix.height()))
 
+        p.save()
         p.setClipRect(target)
         shimmer_alpha = int(72 * (alpha / 255) * (.75 + .25 * math.sin(elapsed * 5)))
         shimmer_speed = 420 if effect == "speed_round" else 260 if effect == "reverse_controls" else 220
@@ -754,10 +763,12 @@ class Overlay(QWidget):
                 color = QColor(255, 186 + (i % 3) * 20, 48, int(alpha * (1 - phase) * .82))
             p.setBrush(QBrush(color))
             p.drawEllipse(QPointF(self.tx(sx + drift), self.ty(sy)), self.tw(size), self.th(size))
+        p.restore()
+
         if effect in ALERT_CARD_KINDS:
-            self.draw_subscription_card_text(p, x, y, w, h, alpha, effect)
+            self.draw_subscription_card_text(p, text_x, text_y, text_w, text_h, alpha, effect)
         else:
-            self.draw_effect_card_text(p, x, y, w, h, effect)
+            self.draw_effect_card_text(p, text_x, text_y, text_w, text_h, effect)
         p.restore()
 
     def draw_centered_card_line(self, p, text, x, y, w, h, size, color=INK, bold=True):
