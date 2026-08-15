@@ -762,10 +762,16 @@ class Overlay(QWidget):
         if effect in ALERT_CARD_KINDS:
             self.draw_subscription_card_text(p, x, y, w, h, alpha, effect)
         else:
-            self.draw_effect_card_meta(p, x, y, w, h, alpha, effect)
+            self.draw_effect_card_text(p, x, y, w, h, effect)
         p.restore()
 
-    def draw_effect_card_meta(self, p, x, y, w, h, alpha, effect):
+    def draw_centered_card_line(self, p, text, x, y, w, h, size, color=INK, bold=True):
+        p.setFont(self.font(size, bold))
+        text = p.fontMetrics().elidedText(str(text), Qt.ElideRight, max(1, int(self.tw(w))))
+        p.setPen(color)
+        p.drawText(QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h)), Qt.AlignCenter, text)
+
+    def event_source_line(self):
         extra = self.event.get("extra", {}) if self.event else {}
         user = str(extra.get("user") or extra.get("source") or "").strip()
         bits = extra.get("bits", extra.get("amount", 0))
@@ -773,31 +779,49 @@ class Overlay(QWidget):
             bits = int(bits)
         except (TypeError, ValueError):
             bits = 0
-        if not user and not bits:
-            return
-
         if user and bits:
-            text = f"{user} - {bits:,} Bits"
-        elif user:
-            text = user
+            return f"{user} - {bits:,} Bits"
+        if user:
+            return user
+        if bits:
+            return f"{bits:,} Bits"
+        return "Reward Active"
+
+    def draw_effect_card_text(self, p, x, y, w, h, effect):
+        copy = {
+            "speed_round": ("SPEED ROUND!", "Voting time reduced to 1 sec!"),
+            "chaos": ("CHAOS MODE!", "All commands execute instantly!"),
+            "reverse_controls": ("REVERSE CONTROLS!", "Up <-> Down   Left <-> Right"),
+            "king_mode": ("KING MODE!", "Only the king controls the game!"),
+        }.get(effect, (str(effect).replace("_", " ").upper(), "World event active!"))
+        accent = {
+            "speed_round": BLUE,
+            "chaos": RED,
+            "reverse_controls": PURPLE,
+            "king_mode": RED,
+        }.get(effect, RED)
+
+        if effect == "king_mode":
+            panel_x, panel_y = x + w * .08, y + h * .655
+            panel_w, panel_h = w * .84, h * .275
+            title_size, body_size, meta_size = 15, 11, 10
         else:
-            text = f"{bits:,} Bits"
+            panel_x, panel_y = x + w * .065, y + h * (.532 if effect == "speed_round" else .548)
+            panel_w, panel_h = w * .87, h * .382
+            title_size, body_size, meta_size = 13, 10, 10
 
-        line_h = max(22.0, min(32.0, h * .115))
-        line_w = min(w - 46.0, max(w * .62, len(text) * 7.4 + 28.0))
-        line_x = x + (w - line_w) / 2
-        line_y = y + h * (.875 if effect == "king_mode" else .805)
+        self.rounded(p, panel_x, panel_y, panel_w, panel_h,
+                     QColor(255, 249, 236, 255),
+                     QColor(184, 150, 96, 220), 6, 1)
 
-        p.setPen(QPen(QColor(184, 150, 96, int(alpha * .72)), max(1, int(round(self.avg_scale())))))
-        p.setBrush(QBrush(QColor(255, 249, 236, int(alpha * .96))))
-        p.drawRoundedRect(QRectF(self.tx(line_x), self.ty(line_y), self.tw(line_w), self.th(line_h)),
-                          self.tw(5), self.th(5))
-
-        p.setFont(self.font(10, True))
-        text = p.fontMetrics().elidedText(text, Qt.ElideRight, max(1, int(self.tw(line_w - 18))))
-        p.setPen(QColor(24, 24, 24, alpha))
-        p.drawText(QRectF(self.tx(line_x + 9), self.ty(line_y - 1), self.tw(line_w - 18), self.th(line_h + 2)),
-                   Qt.AlignCenter, text)
+        inner_x = panel_x + 9
+        inner_w = panel_w - 18
+        self.draw_centered_card_line(p, copy[0], inner_x, panel_y + panel_h * .08,
+                                     inner_w, panel_h * .25, title_size, accent, True)
+        self.draw_centered_card_line(p, copy[1], inner_x, panel_y + panel_h * .39,
+                                     inner_w, panel_h * .24, body_size, INK, True)
+        self.draw_centered_card_line(p, self.event_source_line(), inner_x, panel_y + panel_h * .68,
+                                     inner_w, panel_h * .24, meta_size, INK, True)
 
     def draw_subscription_card_text(self, p, x, y, w, h, alpha, kind):
         extra = self.event.get("extra", {}) if self.event else {}
@@ -843,24 +867,18 @@ class Overlay(QWidget):
             panel_h = h * .375
 
         self.rounded(p, panel_x, panel_y, panel_w, panel_h,
-                     QColor(255, 249, 236, int(alpha * .98)),
-                     QColor(184, 150, 96, int(alpha * .76)), 6, 1)
+                     QColor(255, 249, 236, 255),
+                     QColor(184, 150, 96, 220), 6, 1)
 
-        title_size = 12 if len(title) < 20 else 10
-        p.setFont(self.font(title_size, True))
-        title = p.fontMetrics().elidedText(title, Qt.ElideRight, max(1, int(self.tw(panel_w - 18))))
-        p.setPen(QColor(accent.red(), accent.green(), accent.blue(), alpha))
-        p.drawText(QRectF(self.tx(panel_x + 9), self.ty(panel_y + 5), self.tw(panel_w - 18), self.th(20)),
-                   Qt.AlignCenter, title)
+        title_size = 13 if len(title) < 20 else 11
+        self.draw_centered_card_line(p, title, panel_x + 9, panel_y + 5,
+                                     panel_w - 18, 22, title_size, accent, True)
 
-        p.setFont(self.font(9, True))
-        text_y = panel_y + 29
+        text_y = panel_y + 31
         for line in lines:
-            line = p.fontMetrics().elidedText(line, Qt.ElideRight, max(1, int(self.tw(panel_w - 18))))
-            p.setPen(QColor(24, 24, 24, alpha))
-            p.drawText(QRectF(self.tx(panel_x + 9), self.ty(text_y), self.tw(panel_w - 18), self.th(17)),
-                       Qt.AlignCenter, line)
-            text_y += 18
+            self.draw_centered_card_line(p, line, panel_x + 9, text_y,
+                                         panel_w - 18, 20, 10, INK, True)
+            text_y += 20
 
     def draw_alert(self, p):
         if not self.event:
