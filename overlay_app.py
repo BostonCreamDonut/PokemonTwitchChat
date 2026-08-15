@@ -693,15 +693,10 @@ class Overlay(QWidget):
         base_w = float(OV.get("alert_card_width", 440))
         base_h = base_w * pix.height() / max(1, pix.width())
         pop = self.ease_out_back(elapsed / .42)
-        pulse_rate = 3.8 if effect == "chaos" else 2.2
-        pulse = 1 + math.sin(elapsed * math.pi * pulse_rate) * .012
-        scale = (0.84 + .16 * pop) * pulse * (1 - .04 * outro)
+        scale = 0.84 + .16 * pop
         w, h = base_w * scale, base_h * scale
-        shake = 0
-        if effect == "chaos":
-            shake = math.sin(elapsed * 42) * 5 + math.sin(elapsed * 21) * 2
         x = (SRC_W - w) / 2
-        y = 132 + (1 - intro) * -42 + math.sin(elapsed * 3.5) * 2 + shake
+        y = 132 + (1 - intro) * -42
         if outro:
             y -= 24 * outro
         target = QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h))
@@ -899,7 +894,7 @@ class Overlay(QWidget):
         if effect in ALERT_CARD_EFFECTS:
             pix = self.alert_cards.get(f"{effect}_card")
             if pix:
-                self.draw_effect_card_alert(p, pix, effect, elapsed, dur, intro, outro, alpha)
+                self.draw_effect_card_alert(p, pix, effect, elapsed, dur, intro, 0, int(255 * intro))
                 return
 
         kind = self.event.get("kind", "")
@@ -907,7 +902,7 @@ class Overlay(QWidget):
         if card_name:
             pix = self.alert_cards.get(card_name)
             if pix:
-                self.draw_effect_card_alert(p, pix, kind, elapsed, dur, intro, outro, alpha)
+                self.draw_effect_card_alert(p, pix, kind, elapsed, dur, intro, 0, int(255 * intro))
                 return
 
         w, h = 510, 102
