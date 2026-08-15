@@ -3,20 +3,39 @@ import json
 import sys
 import time
 from pathlib import Path
+from sound_engine import SoundEngine
 
 BASE = Path(__file__).resolve().parent
 CFG = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
 EVENT_PATH = BASE / CFG["overlay"]["event_file"]
 STATE_PATH = BASE / CFG["overlay"]["state_file"]
 PREVIEW_PATH = BASE / CFG["overlay"].get("effect_preview_file", "overlay_effect_preview.json")
+STREAM = CFG.get("stream_system", {})
+SOUND = SoundEngine(BASE / "assets" / "sounds", STREAM.get("sound_enabled", True), STREAM.get("sound_volume", 0.35))
 EFFECT_DURATIONS = {
     rule["effect"]: float(rule.get("duration_seconds", 60))
     for rule in CFG.get("events", {}).get("cheer_effects", [])
+}
+EFFECT_SOUNDS = {
+    "double_votes": "double_votes.wav",
+    "speed_round": "speed_round.wav",
+    "chaos": "chaos.wav",
+    "reverse_controls": "reverse_controls.wav",
+    "king_mode": "gym_win.wav",
+}
+KIND_SOUNDS = {
+    "subscriber": "subscriber.wav",
+    "gift_sub": "gift_sub.wav",
+    "resub": "subscriber.wav",
 }
 
 
 def send(kind, title, subtitle, extra=None, duration=5):
     extra = extra or {}
+    if kind == "world_event" and extra.get("effect"):
+        extra.setdefault("user", "TestTrainer")
+        extra.setdefault("source", extra["user"])
+        extra.setdefault("amount", extra.get("bits", 0))
     payload = {
         "id": time.time_ns(),
         "kind": kind,
@@ -31,6 +50,9 @@ def send(kind, title, subtitle, extra=None, duration=5):
     tmp.replace(EVENT_PATH)
     if kind == "world_event" and extra.get("effect"):
         preview_effect(extra["effect"], EFFECT_DURATIONS.get(extra["effect"], 60))
+    sound = EFFECT_SOUNDS.get(extra.get("effect")) or KIND_SOUNDS.get(kind)
+    if sound:
+        SOUND.play(sound)
     print("Sent:", title, extra or "")
 
 

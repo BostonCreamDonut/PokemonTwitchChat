@@ -761,7 +761,37 @@ class Overlay(QWidget):
                 color = QColor(255, 186 + (i % 3) * 20, 48, int(alpha * (1 - phase) * .82))
             p.setBrush(QBrush(color))
             p.drawEllipse(QPointF(self.tx(sx + drift), self.ty(sy)), self.tw(size), self.th(size))
+        self.draw_effect_card_meta(p, x, y, w, h, alpha)
         p.restore()
+
+    def draw_effect_card_meta(self, p, x, y, w, h, alpha):
+        extra = self.event.get("extra", {}) if self.event else {}
+        user = str(extra.get("user") or extra.get("source") or "").strip()
+        bits = extra.get("bits", extra.get("amount", 0))
+        try:
+            bits = int(bits)
+        except (TypeError, ValueError):
+            bits = 0
+        if not user and not bits:
+            return
+
+        if user and bits:
+            text = f"{user} - {bits:,} Bits"
+        elif user:
+            text = user
+        else:
+            text = f"{bits:,} Bits"
+
+        pill_w = min(w - 28, max(150, len(text) * 8.8 + 34))
+        pill_h = 26
+        pill_x = x + (w - pill_w) / 2
+        pill_y = y + h - pill_h - 9
+        self.rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, int(alpha * .84)), GOLD, 6, 1)
+        p.setFont(self.font(10, True))
+        text = p.fontMetrics().elidedText(text, Qt.ElideRight, max(1, int(self.tw(pill_w - 20))))
+        p.setPen(WHITE)
+        p.drawText(QRectF(self.tx(pill_x + 10), self.ty(pill_y - 1), self.tw(pill_w - 20), self.th(pill_h + 2)),
+                   Qt.AlignCenter, text)
 
     def draw_alert(self, p):
         if not self.event:

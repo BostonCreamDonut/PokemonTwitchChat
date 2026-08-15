@@ -210,8 +210,8 @@ class App:
         if effect=="king_mode" and user:
             subtitle=f"{user} is king for {int(duration)} seconds"
         self.events.alert("world_event",labels.get(effect,effect.upper()),
-                          subtitle,
-                          {"effect":effect},3.2,sound)
+                           subtitle,
+                           {"effect":effect,"user":user,"source":user,"amount":amount,"bits":amount,"duration":duration},3.2,sound)
         if user:
             self.db.record_event(user, amount)
         if effect=="king_mode":
