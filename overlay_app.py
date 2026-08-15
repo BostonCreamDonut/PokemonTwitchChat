@@ -759,10 +759,13 @@ class Overlay(QWidget):
                 color = QColor(255, 186 + (i % 3) * 20, 48, int(alpha * (1 - phase) * .82))
             p.setBrush(QBrush(color))
             p.drawEllipse(QPointF(self.tx(sx + drift), self.ty(sy)), self.tw(size), self.th(size))
-        self.draw_effect_card_meta(p, x, y, w, h, alpha)
+        if effect in ALERT_CARD_KINDS:
+            self.draw_subscription_card_text(p, x, y, w, h, alpha, effect)
+        else:
+            self.draw_effect_card_meta(p, x, y, w, h, alpha, effect)
         p.restore()
 
-    def draw_effect_card_meta(self, p, x, y, w, h, alpha):
+    def draw_effect_card_meta(self, p, x, y, w, h, alpha, effect):
         extra = self.event.get("extra", {}) if self.event else {}
         user = str(extra.get("user") or extra.get("source") or "").strip()
         bits = extra.get("bits", extra.get("amount", 0))
@@ -783,7 +786,7 @@ class Overlay(QWidget):
         line_h = max(22.0, min(32.0, h * .115))
         line_w = min(w - 46.0, max(w * .62, len(text) * 7.4 + 28.0))
         line_x = x + (w - line_w) / 2
-        line_y = y + h * .805
+        line_y = y + h * (.875 if effect == "king_mode" else .805)
 
         p.setPen(QPen(QColor(184, 150, 96, int(alpha * .72)), max(1, int(round(self.avg_scale())))))
         p.setBrush(QBrush(QColor(255, 249, 236, int(alpha * .96))))
@@ -795,6 +798,69 @@ class Overlay(QWidget):
         p.setPen(QColor(24, 24, 24, alpha))
         p.drawText(QRectF(self.tx(line_x + 9), self.ty(line_y - 1), self.tw(line_w - 18), self.th(line_h + 2)),
                    Qt.AlignCenter, text)
+
+    def draw_subscription_card_text(self, p, x, y, w, h, alpha, kind):
+        extra = self.event.get("extra", {}) if self.event else {}
+        subtitle = str(self.event.get("subtitle", "")) if self.event else ""
+        user = str(extra.get("user") or extra.get("source") or "").strip()
+        if not user and " subscribed" in subtitle:
+            user = subtitle.split(" subscribed", 1)[0].strip()
+        if not user and " resubscribed" in subtitle:
+            user = subtitle.split(" resubscribed", 1)[0].strip()
+        if not user and " gifted" in subtitle:
+            user = subtitle.split(" gifted", 1)[0].strip()
+        if not user:
+            user = "Trainer"
+
+        months = str(extra.get("months") or "1")
+        count = str(extra.get("count") or "")
+        recipient = str(extra.get("recipient") or "").strip()
+
+        if kind == "subscriber":
+            title = "NEW TRAINER JOINED!"
+            lines = [f"{user} subscribed!", "Votes now count x2!"]
+            accent = RED
+        elif kind == "resub":
+            title = "WELCOME BACK!"
+            month_label = "month" if months == "1" else "months"
+            lines = [f"{user} resubscribed", f"for {months} {month_label}!"]
+            accent = GREEN
+        else:
+            if count:
+                title = f"GIFTED {count} SUBS!"
+                lines = [f"{user} gifted {count} subs!", "Thank you!"]
+            else:
+                title = "GIFTED SUB!"
+                lines = [f"{user} gifted a sub", f"to {recipient or 'a trainer'}!"]
+            accent = ORANGE
+
+        panel_x = x + w * .075
+        panel_y = y + h * .57
+        panel_w = w * .85
+        panel_h = h * .34
+        if kind == "resub":
+            panel_y = y + h * .535
+            panel_h = h * .375
+
+        self.rounded(p, panel_x, panel_y, panel_w, panel_h,
+                     QColor(255, 249, 236, int(alpha * .98)),
+                     QColor(184, 150, 96, int(alpha * .76)), 6, 1)
+
+        title_size = 12 if len(title) < 20 else 10
+        p.setFont(self.font(title_size, True))
+        title = p.fontMetrics().elidedText(title, Qt.ElideRight, max(1, int(self.tw(panel_w - 18))))
+        p.setPen(QColor(accent.red(), accent.green(), accent.blue(), alpha))
+        p.drawText(QRectF(self.tx(panel_x + 9), self.ty(panel_y + 5), self.tw(panel_w - 18), self.th(20)),
+                   Qt.AlignCenter, title)
+
+        p.setFont(self.font(9, True))
+        text_y = panel_y + 29
+        for line in lines:
+            line = p.fontMetrics().elidedText(line, Qt.ElideRight, max(1, int(self.tw(panel_w - 18))))
+            p.setPen(QColor(24, 24, 24, alpha))
+            p.drawText(QRectF(self.tx(panel_x + 9), self.ty(text_y), self.tw(panel_w - 18), self.th(17)),
+                       Qt.AlignCenter, line)
+            text_y += 18
 
     def draw_alert(self, p):
         if not self.event:

@@ -237,25 +237,25 @@ class App:
             months=tags.get("msg-param-cumulative-months","1")
             self.events.alert("subscriber","NEW TRAINER JOINED!",
                               f"{name} subscribed - {months} month(s) - votes count x2",
-                              {"months":months},4.0,"subscriber.wav")
+                              {"user":name,"months":months},4.0,"subscriber.wav")
             self.db.record_event(name)
         elif msgid=="resub":
             months=tags.get("msg-param-cumulative-months","1")
             self.events.alert("resub","WELCOME BACK!",
                               f"{name} resubscribed for {months} month(s)",
-                              {"months":months},4.0,"subscriber.wav")
+                              {"user":name,"months":months},4.0,"subscriber.wav")
             self.db.record_event(name)
         elif msgid in ("subgift","anonsubgift"):
             rec=tags.get("msg-param-recipient-display-name","a trainer")
             self.events.alert("gift_sub","A POKé BALL WAS GIFTED!",
                               f"{name} gifted a sub to {rec}",
-                              {"recipient":rec},4.5,"gift_sub.wav")
+                              {"user":name,"recipient":rec},4.5,"gift_sub.wav")
             self.db.record_event(name)
         elif msgid in ("submysterygift","anonsubmysterygift"):
             count=tags.get("msg-param-mass-gift-count","?")
             self.events.alert("gift_sub","TRAINER PARTY EXPANDED!",
                               f"{name} gifted {count} subscriptions!",
-                              {"count":count},4.5,"gift_sub.wav")
+                              {"user":name,"count":count},4.5,"gift_sub.wav")
             self.db.record_event(name)
 
     def handle_cheer(self,user,bits):
