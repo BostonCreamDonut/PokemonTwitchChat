@@ -13,6 +13,7 @@ STATE = BASE / OV["state_file"]
 EVENTS = BASE / OV["event_file"]
 BOOT = BASE / OV.get("boot_file", "boot_state.json")
 DIALOGUE = BASE / OV.get("dialogue_file", "dialogue_state.json")
+EFFECT_PREVIEW = BASE / OV.get("effect_preview_file", "overlay_effect_preview.json")
 FRAME = BASE / OV["reference_frame"]
 HUD_DIR = BASE / "assets" / "ui" / "hud"
 ALERT_DIR = BASE / "assets" / "ui" / "alerts"
@@ -62,6 +63,7 @@ class Overlay(QWidget):
         self.dialogue = None
         self.dialogue_id = None
         self.dialogue_start = 0
+        self.effect_preview = []
         self.boot = None
         self.frame = QPixmap(str(FRAME))
         if self.frame.isNull():
@@ -155,6 +157,12 @@ class Overlay(QWidget):
         b = self.read_json(BOOT)
         if b:
             self.boot = b
+
+        preview = self.read_json(EFFECT_PREVIEW)
+        if isinstance(preview, dict):
+            self.effect_preview = preview.get("active_effects", [])
+        elif isinstance(preview, list):
+            self.effect_preview = preview
 
         self.update()
 
@@ -605,17 +613,20 @@ class Overlay(QWidget):
         self.screen_text(p, text, x + icon_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_active_effects(self, p):
-        effects = self.state.get("active_effects", [])[:5]
+        effects = self.active_effects_for_display()[:5]
         cards = []
         for ef in effects:
             effect_id = ef.get("effect", "")
             pix = self.alert_cards.get(f"{effect_id}_card")
             if pix and not pix.isNull():
+                remaining = self.effect_remaining(ef)
+                if remaining <= 0:
+                    continue
                 max_w, max_h = 138.0, 96.0
                 scale = min(max_w / max(1, pix.width()), max_h / max(1, pix.height()))
                 cards.append({
                     "pix": pix,
-                    "remaining": max(0, float(ef.get("remaining", 0))),
+                    "remaining": remaining,
                     "w": pix.width() * scale,
                     "h": pix.height() * scale,
                 })
@@ -646,6 +657,30 @@ class Overlay(QWidget):
             self.screen_rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, 225), GOLD, 5, 1)
             self.screen_text(p, timer, pill_x, pill_y - 1, pill_w, pill_h + 2, 12, WHITE, True, Qt.AlignCenter)
             x += w + gap
+
+    def active_effects_for_display(self):
+        merged = {}
+        for effect in list(self.state.get("active_effects", [])) + list(self.effect_preview or []):
+            effect_id = effect.get("effect", "")
+            if not effect_id:
+                continue
+            remaining = self.effect_remaining(effect)
+            if remaining <= 0:
+                continue
+            current = merged.get(effect_id)
+            if not current or remaining > self.effect_remaining(current):
+                item = dict(effect)
+                item["remaining"] = remaining
+                merged[effect_id] = item
+        return list(merged.values())
+
+    def effect_remaining(self, effect):
+        try:
+            if "expires_at" in effect:
+                return max(0.0, float(effect.get("expires_at", 0)) - time.time())
+            return max(0.0, float(effect.get("remaining", 0)))
+        except (TypeError, ValueError):
+            return 0.0
 
     def ease_out_back(self, t):
         t = max(0.0, min(1.0, float(t))) - 1

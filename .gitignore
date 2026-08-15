@@ -4,6 +4,7 @@ data/*
 overlay_state.json
 game_state.json
 overlay_event.json
+overlay_effect_preview.json
 boot_state.json
 dialogue_state.json
 __pycache__/

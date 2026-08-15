@@ -7,22 +7,97 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 CFG = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
 EVENT_PATH = BASE / CFG["overlay"]["event_file"]
+STATE_PATH = BASE / CFG["overlay"]["state_file"]
+PREVIEW_PATH = BASE / CFG["overlay"].get("effect_preview_file", "overlay_effect_preview.json")
+EFFECT_DURATIONS = {
+    rule["effect"]: float(rule.get("duration_seconds", 60))
+    for rule in CFG.get("events", {}).get("cheer_effects", [])
+}
 
 
 def send(kind, title, subtitle, extra=None, duration=5):
+    extra = extra or {}
     payload = {
         "id": time.time_ns(),
         "kind": kind,
         "title": title,
         "subtitle": subtitle,
-        "extra": extra or {},
+        "extra": extra,
         "duration": duration,
         "created_at": time.time(),
     }
     tmp = EVENT_PATH.with_suffix(".tmp")
     tmp.write_text(json.dumps(payload), encoding="utf-8")
     tmp.replace(EVENT_PATH)
+    if kind == "world_event" and extra.get("effect"):
+        preview_effect(extra["effect"], EFFECT_DURATIONS.get(extra["effect"], 60))
     print("Sent:", title, extra or "")
+
+
+def read_state():
+    try:
+        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def write_state(state):
+    tmp = STATE_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state), encoding="utf-8")
+    tmp.replace(STATE_PATH)
+
+
+def read_preview():
+    try:
+        data = json.loads(PREVIEW_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data.get("active_effects", [])
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+def write_preview(active):
+    payload = {"active_effects": active}
+    tmp = PREVIEW_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload), encoding="utf-8")
+    tmp.replace(PREVIEW_PATH)
+
+
+def preview_effect(effect, duration):
+    now = time.time()
+    active = []
+    for item in read_preview():
+        item_effect = item.get("effect")
+        if item_effect == effect:
+            continue
+        expires_at = item.get("expires_at")
+        if expires_at is not None:
+            try:
+                if float(expires_at) <= now:
+                    continue
+            except (TypeError, ValueError):
+                continue
+        active.append(item)
+    active.append({
+        "effect": effect,
+        "remaining": duration,
+        "expires_at": now + duration,
+        "source": "TestTrainer",
+        "amount": 0,
+    })
+    write_preview(active)
+
+
+def clear_effects():
+    state = read_state()
+    if "active_effects" in state:
+        state["active_effects"] = []
+        write_state(state)
+    write_preview([])
+    print("Cleared active effect previews")
 
 
 MENU = {
@@ -63,6 +138,8 @@ def send_arg(arg):
     arg = arg.strip().lower()
     if arg in ("all", "cycle"):
         play_all()
+    elif arg in ("clear", "clear_effects", "none"):
+        clear_effects()
     elif arg in MENU:
         send(*MENU[arg])
     elif arg in ALIASES:
@@ -76,10 +153,13 @@ if len(sys.argv) > 1:
     raise SystemExit
 
 while True:
-    print("\n1 Sub  2 Gift  3 Resub  4 Double  5 Speed  6 Chaos  7 Reverse  8 King  a All  q Quit")
+    print("\n1 Sub  2 Gift  3 Resub  4 Double  5 Speed  6 Chaos  7 Reverse  8 King  a All  c Clear  q Quit")
     choice = input("> ").strip().lower()
     if choice == "q":
         break
+    if choice == "c":
+        clear_effects()
+        continue
     if choice == "a":
         play_all()
     elif choice in MENU:
