@@ -24,20 +24,17 @@ Each round lasts about 3 seconds. The command with the highest **weighted vote p
 
 Twitch Bits can temporarily change the rules of the game.
 
-**100 Bits — Double Votes**
-Everyone's vote power doubles for 30 seconds.
-
-**500 Bits — Speed Round**
+**250 Bits — Speed Round**
 Voting windows become 1 second for 60 seconds.
 
-**1000 Bits — Chaos Mode**
-The winning command executes, then the game also presses A once each round for 60 seconds.
-
-**1500 Bits — Anarchy Mode**
+**500 Bits — Chaos Mode**
 Valid commands execute instantly for 60 seconds.
 
-**2000 Bits — Reverse Controls**
+**1000 Bits — Reverse Controls**
 Up/Down and Left/Right are swapped for 60 seconds.
+
+**2000 Bits — King Mode**
+One viewer controls the game for 60 seconds.
 
 Active effects are always shown on the stream overlay with a countdown.
 
@@ -66,7 +63,7 @@ For v6, these stats are intentionally removed from the permanent overlay to keep
 The stream uses democracy voting. Only the command with the highest weighted percentage executes when the timer ends.
 
 **Do subscribers control the game more?**
-Subscribers receive a small perk: their vote counts as 2 instead of 1. They still only have one active vote per round.
+Subscribers receive a small perk: their vote counts as 2 instead of 1. Gifted subs give that perk to the recipient. They still only have one active vote per round.
 
 **Can I change my vote?**
 Yes. Enter another valid command before the voting timer ends.

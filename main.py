@@ -199,10 +199,10 @@ class App:
 
     def activate_effect(self,effect,duration,user="",amount=0):
         self.effects[effect]={"end":time.monotonic()+duration,"source":user,"amount":amount}
-        labels={"double_votes":"DOUBLE VOTES","speed_round":"SPEED ROUND","chaos":"CHAOS MODE",
+        labels={"speed_round":"SPEED ROUND","chaos":"CHAOS MODE",
                 "reverse_controls":"REVERSE CONTROLS",
                 "king_mode":"KING MODE"}
-        sound={"double_votes":"double_votes.wav","speed_round":"speed_round.wav",
+        sound={"speed_round":"speed_round.wav",
                "chaos":"chaos.wav",
                "reverse_controls":"reverse_controls.wav",
                "king_mode":"gym_win.wav"}.get(effect)
@@ -219,7 +219,6 @@ class App:
                 self.clear_round_votes()
                 self.round_end=time.monotonic()+self.base_window
         dialogue={
-            "double_votes":("Professor Oak","The trainers are fired up! Everyone's vote power has doubled!"),
             "speed_round":("Bike Shop","Hold on tight! Voting just got a whole lot faster!"),
             "chaos":("Team Rocket","Prepare for trouble! Every command goes through right now!"),
             "reverse_controls":("Psychic Trainer","Your sense of direction feels... backwards."),
@@ -229,9 +228,7 @@ class App:
             threading.Timer(1.0, lambda: self.events.dialogue(*dialogue)).start()
 
     def weight(self,tags):
-        w=CFG["voting"]["subscriber_weight"] if is_sub(tags) else CFG["voting"]["regular_weight"]
-        if self.effect_active("double_votes"): w*=2
-        return w
+        return CFG["voting"]["subscriber_weight"] if is_sub(tags) else CFG["voting"]["regular_weight"]
 
     def on_notice(self,tags):
         msgid=tags.get("msg-id","")
@@ -269,7 +266,7 @@ class App:
             self.activate_effect(rule["effect"],rule["duration_seconds"],user,bits)
         else:
             self.events.alert("cheer","TRAINER USED AN ITEM!",
-                              f"{user} used {bits:,} Bits",{"bits":bits},4.0,"double_votes.wav")
+                              f"{user} used {bits:,} Bits",{"bits":bits},4.0)
             self.db.record_event(user,bits)
 
     def mapped_key(self,cmd):

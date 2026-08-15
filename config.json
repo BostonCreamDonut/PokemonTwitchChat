@@ -35,31 +35,25 @@
     "effect_banner_seconds": 3.0,
     "cheer_effects": [
       {
-        "minimum_bits": 100,
-        "effect": "double_votes",
-        "duration_seconds": 30,
-        "label": "DOUBLE VOTES"
-      },
-      {
-        "minimum_bits": 500,
+        "minimum_bits": 250,
         "effect": "speed_round",
         "duration_seconds": 60,
         "label": "SPEED ROUND"
       },
       {
-        "minimum_bits": 1000,
+        "minimum_bits": 500,
         "effect": "chaos",
         "duration_seconds": 60,
         "label": "CHAOS MODE"
       },
       {
-        "minimum_bits": 2000,
+        "minimum_bits": 1000,
         "effect": "reverse_controls",
         "duration_seconds": 60,
         "label": "REVERSE CONTROLS"
       },
       {
-        "minimum_bits": 5000,
+        "minimum_bits": 2000,
         "effect": "king_mode",
         "duration_seconds": 60,
         "label": "KING MODE"
@@ -194,8 +188,8 @@
       "description": "Cast 75 weighted votes before time runs out!",
       "target": 75,
       "metric": "weighted_votes",
-      "reward": "DOUBLE VOTES",
-      "reward_effect": "double_votes",
+      "reward": "SPEED ROUND",
+      "reward_effect": "speed_round",
       "reward_seconds": 20
     },
     {

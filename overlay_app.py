@@ -37,7 +37,6 @@ DARK2 = QColor("#121617")
 FOOTER = QColor("#0A0D0F")
 VOTE_COLORS = [RED, ORANGE, GREEN, BLUE, PURPLE]
 ALERT_CARD_EFFECTS = {
-    "double_votes",
     "speed_round",
     "chaos",
     "reverse_controls",
@@ -710,7 +709,6 @@ class Overlay(QWidget):
         p.save()
         p.setOpacity(max(0.0, min(1.0, alpha / 255)))
         glow = {
-            "double_votes": QColor(255, 208, 62, 44),
             "speed_round": QColor(68, 176, 255, 50),
             "chaos": QColor(202, 38, 30, 54),
             "reverse_controls": QColor(150, 98, 235, 48),
@@ -757,8 +755,6 @@ class Overlay(QWidget):
                 color = QColor(172, 126 + (i % 3) * 30, 255, int(alpha * (1 - phase) * .72))
             elif effect == "speed_round":
                 color = QColor(160, 225, 255, int(alpha * (1 - phase) * .72))
-            elif effect == "double_votes":
-                color = QColor(255, 220 + (i % 2) * 20, 68, int(alpha * (1 - phase) * .76))
             else:
                 color = QColor(255, 186 + (i % 3) * 20, 48, int(alpha * (1 - phase) * .82))
             p.setBrush(QBrush(color))
