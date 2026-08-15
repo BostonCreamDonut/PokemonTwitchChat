@@ -351,31 +351,12 @@ class Overlay(QWidget):
             self.screen_text(p, f"({wt})", 1817, yy + 17, 70, 16, 13, INK, True, Qt.AlignRight | Qt.AlignVCenter)
             yy += 58
 
-        self.draw_round_effect_timers(p)
         self.screen_text(p, f"Total Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
-                         1750, 542, 138, 24, 14, INK, True, Qt.AlignRight | Qt.AlignVCenter)
+                         1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
 
         self.screen_rounded(p, 1588, 224, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
         if progress > 0:
             self.screen_rounded(p, 1589, 225, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
-
-    def draw_round_effect_timers(self, p):
-        effects = self.state.get("active_effects", [])[:3]
-        if not effects:
-            return
-        x0, y = 1562, 535
-        for i, ef in enumerate(effects):
-            effect_id = ef.get("effect", "")
-            x = x0 + i * 62
-            icon = self.alert_cards.get(f"{effect_id}_icon")
-            if icon:
-                p.drawPixmap(QRectF(self.tx(x), self.ty(y), self.tw(22), self.th(22)),
-                             icon, QRectF(0, 0, icon.width(), icon.height()))
-            else:
-                self.screen_text(p, "*", x, y, 24, 24, 14, GOLD, True, Qt.AlignCenter)
-            remaining = max(0, float(ef.get("remaining", 0)))
-            text = f"{remaining:.1f}s" if remaining < 10 else f"{remaining:.0f}s"
-            self.screen_text(p, text, x + 26, y + 1, 34, 22, 12, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
 
     def draw_chat_legacy(self, p):
         yy = 555
@@ -624,31 +605,47 @@ class Overlay(QWidget):
         self.screen_text(p, text, x + icon_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_active_effects(self, p):
-        return
+        effects = self.state.get("active_effects", [])[:5]
+        cards = []
+        for ef in effects:
+            effect_id = ef.get("effect", "")
+            pix = self.alert_cards.get(f"{effect_id}_card")
+            if pix and not pix.isNull():
+                max_w, max_h = 138.0, 96.0
+                scale = min(max_w / max(1, pix.width()), max_h / max(1, pix.height()))
+                cards.append({
+                    "pix": pix,
+                    "remaining": max(0, float(ef.get("remaining", 0))),
+                    "w": pix.width() * scale,
+                    "h": pix.height() * scale,
+                })
+        if not cards:
+            return
 
-    def draw_effect_timer(self, p, effect):
-        effect_id = effect.get("effect", "")
-        remaining = max(0, float(effect.get("remaining", 0)))
-        x, y, w, h = 1170, 155, 140, 58
-        self.rounded(p, x, y, w, h, QColor("#111516", 240), ORANGE, 4, 2)
-        icon = self.alert_cards.get(f"{effect_id}_icon")
-        if icon:
-            p.drawPixmap(QRectF(self.tx(x + 12), self.ty(y + 9), self.tw(40), self.th(40)),
-                         icon, QRectF(0, 0, icon.width(), icon.height()))
-        else:
-            bolt = QPolygonF([
-                QPointF(self.tx(x + 29), self.ty(y + 9)),
-                QPointF(self.tx(x + 17), self.ty(y + 31)),
-                QPointF(self.tx(x + 28), self.ty(y + 29)),
-                QPointF(self.tx(x + 21), self.ty(y + 50)),
-                QPointF(self.tx(x + 43), self.ty(y + 21)),
-                QPointF(self.tx(x + 31), self.ty(y + 23)),
-            ])
-            p.setPen(Qt.NoPen)
-            p.setBrush(QBrush(GOLD))
-            p.drawPolygon(bolt)
-        self.text(p, f"{remaining:04.1f}s" if remaining < 10 else f"{remaining:05.1f}s",
-                  x + 58, y + 16, w - 66, 26, 13, WHITE, True, Qt.AlignVCenter | Qt.AlignLeft)
+        gap = 10.0
+        total_w = sum(card["w"] for card in cards) + gap * (len(cards) - 1)
+        game = OV.get("game_rect", {})
+        gx = float(game.get("x", 321))
+        gy = float(game.get("y", 166))
+        gw = float(game.get("width", 1207))
+        gh = float(game.get("height", 770))
+        x = gx + (gw - total_w) / 2
+        bottom = gy + gh - 12
+
+        for card in cards:
+            pix = card["pix"]
+            w, h = card["w"], card["h"]
+            y = bottom - h
+            p.drawPixmap(QRectF(x, y, w, h), pix, QRectF(0, 0, pix.width(), pix.height()))
+
+            remaining = card["remaining"]
+            timer = f"{remaining:.1f}s" if remaining < 10 else f"{remaining:.0f}s"
+            pill_w, pill_h = min(64.0, w - 12.0), 20.0
+            pill_x = x + (w - pill_w) / 2
+            pill_y = y + h - pill_h - 5
+            self.screen_rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, 225), GOLD, 5, 1)
+            self.screen_text(p, timer, pill_x, pill_y - 1, pill_w, pill_h + 2, 12, WHITE, True, Qt.AlignCenter)
+            x += w + gap
 
     def ease_out_back(self, t):
         t = max(0.0, min(1.0, float(t))) - 1
