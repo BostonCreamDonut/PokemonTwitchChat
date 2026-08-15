@@ -351,12 +351,31 @@ class Overlay(QWidget):
             self.screen_text(p, f"({wt})", 1817, yy + 17, 70, 16, 13, INK, True, Qt.AlignRight | Qt.AlignVCenter)
             yy += 58
 
-        self.screen_text(p, f"Total Weighted Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
-                         1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
+        self.draw_round_effect_timers(p)
+        self.screen_text(p, f"Total Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
+                         1750, 542, 138, 24, 14, INK, True, Qt.AlignRight | Qt.AlignVCenter)
 
         self.screen_rounded(p, 1588, 224, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
         if progress > 0:
             self.screen_rounded(p, 1589, 225, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
+
+    def draw_round_effect_timers(self, p):
+        effects = self.state.get("active_effects", [])[:3]
+        if not effects:
+            return
+        x0, y = 1562, 535
+        for i, ef in enumerate(effects):
+            effect_id = ef.get("effect", "")
+            x = x0 + i * 62
+            icon = self.alert_cards.get(f"{effect_id}_icon")
+            if icon:
+                p.drawPixmap(QRectF(self.tx(x), self.ty(y), self.tw(22), self.th(22)),
+                             icon, QRectF(0, 0, icon.width(), icon.height()))
+            else:
+                self.screen_text(p, "*", x, y, 24, 24, 14, GOLD, True, Qt.AlignCenter)
+            remaining = max(0, float(ef.get("remaining", 0)))
+            text = f"{remaining:.1f}s" if remaining < 10 else f"{remaining:.0f}s"
+            self.screen_text(p, text, x + 26, y + 1, 34, 22, 12, INK, True, Qt.AlignLeft | Qt.AlignVCenter)
 
     def draw_chat_legacy(self, p):
         yy = 555
@@ -605,25 +624,7 @@ class Overlay(QWidget):
         self.screen_text(p, text, x + icon_size + gap, cy - text_h / 2 - 2, text_w + 8, text_h + 8, font_size, INK, True)
 
     def draw_active_effects(self, p):
-        effects = self.state.get("active_effects", [])
-        if not effects:
-            return
-        self.draw_effect_timer(p, effects[0])
-        x, y, w = 280, 585, 122
-        h = min(76, 10 + 32 * len(effects[:2]))
-        self.rounded(p, x, y, w, h, QColor("#111516", 238), RED, 6, 2)
-        yy = y + 8
-        for ef in effects[:2]:
-            p.fillRect(QRectF(self.tx(x + 8), self.ty(yy - 2), self.tw(28), self.th(28)), QColor("#111516", 238))
-            effect_id = ef.get("effect", "")
-            icon = self.alert_cards.get(f"{effect_id}_icon")
-            if icon:
-                p.drawPixmap(QRectF(self.tx(x + 9), self.ty(yy - 1), self.tw(26), self.th(26)),
-                             icon, QRectF(0, 0, icon.width(), icon.height()))
-            else:
-                self.text(p, "*", x + 10, yy, 20, 20, 10, GOLD, True, Qt.AlignCenter)
-            self.text(p, f"{float(ef.get('remaining', 0)):.0f}s", x + 42, yy + 1, w - 50, 22, 11, CREAM, True, Qt.AlignVCenter | Qt.AlignLeft)
-            yy += 32
+        return
 
     def draw_effect_timer(self, p, effect):
         effect_id = effect.get("effect", "")
