@@ -86,7 +86,7 @@
     "right_panel_width": 245,
     "header_height": 66,
     "theme_file": "theme_firered.json",
-    "alert_card_width": 440,
+    "alert_card_width": 380,
     "trainer_card_seconds": 6.0,
     "boot_file": "boot_state.json",
     "dialogue_file": "dialogue_state.json",

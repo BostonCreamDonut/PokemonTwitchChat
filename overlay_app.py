@@ -651,11 +651,11 @@ class Overlay(QWidget):
 
             remaining = card["remaining"]
             timer = f"{remaining:.1f}s" if remaining < 10 else f"{remaining:.0f}s"
-            pill_w, pill_h = min(64.0, w - 12.0), 20.0
+            pill_w, pill_h = min(78.0, w - 8.0), 26.0
             pill_x = x + (w - pill_w) / 2
-            pill_y = y + h - pill_h - 5
-            self.screen_rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, 225), GOLD, 5, 1)
-            self.screen_text(p, timer, pill_x, pill_y - 1, pill_w, pill_h + 2, 12, WHITE, True, Qt.AlignCenter)
+            pill_y = y + h - pill_h - 4
+            self.screen_rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, 232), GOLD, 6, 2)
+            self.screen_text(p, timer, pill_x, pill_y - 1, pill_w, pill_h + 2, 15, WHITE, True, Qt.AlignCenter)
             x += w + gap
 
     def active_effects_for_display(self):
