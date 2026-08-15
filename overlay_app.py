@@ -780,15 +780,20 @@ class Overlay(QWidget):
         else:
             text = f"{bits:,} Bits"
 
-        pill_w = min(w - 28, max(150, len(text) * 8.8 + 34))
-        pill_h = 26
-        pill_x = x + (w - pill_w) / 2
-        pill_y = y + h - pill_h - 9
-        self.rounded(p, pill_x, pill_y, pill_w, pill_h, QColor(8, 10, 11, int(alpha * .84)), GOLD, 6, 1)
+        line_h = max(22.0, min(32.0, h * .115))
+        line_w = min(w - 46.0, max(w * .62, len(text) * 7.4 + 28.0))
+        line_x = x + (w - line_w) / 2
+        line_y = y + h * .805
+
+        p.setPen(QPen(QColor(184, 150, 96, int(alpha * .72)), max(1, int(round(self.avg_scale())))))
+        p.setBrush(QBrush(QColor(255, 249, 236, int(alpha * .96))))
+        p.drawRoundedRect(QRectF(self.tx(line_x), self.ty(line_y), self.tw(line_w), self.th(line_h)),
+                          self.tw(5), self.th(5))
+
         p.setFont(self.font(10, True))
-        text = p.fontMetrics().elidedText(text, Qt.ElideRight, max(1, int(self.tw(pill_w - 20))))
-        p.setPen(WHITE)
-        p.drawText(QRectF(self.tx(pill_x + 10), self.ty(pill_y - 1), self.tw(pill_w - 20), self.th(pill_h + 2)),
+        text = p.fontMetrics().elidedText(text, Qt.ElideRight, max(1, int(self.tw(line_w - 18))))
+        p.setPen(QColor(24, 24, 24, alpha))
+        p.drawText(QRectF(self.tx(line_x + 9), self.ty(line_y - 1), self.tw(line_w - 18), self.th(line_h + 2)),
                    Qt.AlignCenter, text)
 
     def draw_alert(self, p):
