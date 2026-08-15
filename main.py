@@ -184,24 +184,47 @@ class App:
             return False
         return True
 
+    def king_mode_owner(self):
+        d=self.effects.get("king_mode")
+        if not d:
+            return None
+        if time.monotonic()>=d["end"]:
+            self.effects.pop("king_mode",None)
+            return None
+        owner=(d.get("source") or "").strip().lower()
+        return owner or None
+
+    def clear_round_votes(self):
+        self.votes=Counter(); self.raw=Counter(); self.user_votes={}; self.order={}; self.seq=0
+
     def activate_effect(self,effect,duration,user="",amount=0):
         self.effects[effect]={"end":time.monotonic()+duration,"source":user,"amount":amount}
         labels={"double_votes":"DOUBLE VOTES","speed_round":"SPEED ROUND","chaos":"CHAOS MODE",
-                "anarchy":"ANARCHY MODE","reverse_controls":"REVERSE CONTROLS"}
+                "anarchy":"ANARCHY MODE","reverse_controls":"REVERSE CONTROLS",
+                "king_mode":"KING MODE"}
         sound={"double_votes":"double_votes.wav","speed_round":"speed_round.wav",
                "chaos":"chaos.wav","anarchy":"anarchy.wav",
-               "reverse_controls":"reverse_controls.wav"}.get(effect)
+               "reverse_controls":"reverse_controls.wav",
+               "king_mode":"anarchy.wav"}.get(effect)
+        subtitle=f"Active for {int(duration)} seconds"
+        if effect=="king_mode" and user:
+            subtitle=f"{user} is king for {int(duration)} seconds"
         self.events.alert("world_event",labels.get(effect,effect.upper()),
-                          f"Active for {int(duration)} seconds",
+                          subtitle,
                           {"effect":effect},3.2,sound)
         if user:
             self.db.record_event(user, amount)
+        if effect=="king_mode":
+            with self.lock:
+                self.clear_round_votes()
+                self.round_end=time.monotonic()+self.base_window
         dialogue={
             "double_votes":("Professor Oak","The trainers are fired up! Everyone's vote power has doubled!"),
             "speed_round":("Bike Shop","Hold on tight! Voting just got a whole lot faster!"),
             "chaos":("Team Rocket","Prepare for trouble! Every winning move gets an extra A press!"),
             "anarchy":("Rival","Forget voting—every command goes through right now!"),
-            "reverse_controls":("Psychic Trainer","Your sense of direction feels... backwards.")
+            "reverse_controls":("Psychic Trainer","Your sense of direction feels... backwards."),
+            "king_mode":("Elite Trainer",f"{user} is king now. Hold on tight!")
         }.get(effect)
         if dialogue:
             threading.Timer(1.0, lambda: self.events.dialogue(*dialogue)).start()
@@ -369,6 +392,18 @@ class App:
 
         cmd=low
         if cmd not in self.controls:return
+
+        king_owner=self.king_mode_owner()
+        if king_owner:
+            if user.lower()==king_owner:
+                w=self.weight(tags)
+                self.db.record_vote(user,w,CFG["stream_system"]["trainer_xp_per_vote"])
+                self.controller.press(self.mapped_key(cmd))
+                with self.lock:
+                    self.recent.append({"username":user,"command":cmd,"subscriber":is_sub(tags),"weight":w})
+                    self.recent=self.recent[-30:]
+            return
+
         w=self.weight(tags)
         self.db.record_vote(user,w,CFG["stream_system"]["trainer_xp_per_vote"])
 
@@ -444,6 +479,12 @@ class App:
 
     def round_worker(self):
         while not STOP.is_set():
+            if self.king_mode_owner():
+                with self.lock:
+                    self.clear_round_votes()
+                    self.round_end=time.monotonic()+self.base_window
+                STOP.wait(.05)
+                continue
             desired=1.0 if self.effect_active("speed_round") else self.base_window
             if desired!=self.vote_window:
                 self.vote_window=desired; self.round_end=time.monotonic()+desired
@@ -496,7 +537,7 @@ class App:
         for k,d in list(self.effects.items()):
             rem=d["end"]-time.monotonic()
             if rem<=0:self.effects.pop(k,None)
-            else:out.append({"effect":k,"remaining":rem})
+            else:out.append({"effect":k,"remaining":rem,"source":d.get("source",""),"amount":d.get("amount",0)})
         return out
 
     def gym_state(self):
@@ -518,7 +559,7 @@ class App:
             rem=max(0,self.round_end-time.monotonic())
             return {
                 "connected":self.chat.connected,
-                "mode":"ANARCHY" if self.effect_active("anarchy") else "DEMOCRACY",
+                "mode":"KING MODE" if self.king_mode_owner() else "ANARCHY" if self.effect_active("anarchy") else "DEMOCRACY",
                 "time_remaining":rem,
                 "round_progress":1-rem/self.vote_window if self.vote_window else 1,
                 "votes":rows,

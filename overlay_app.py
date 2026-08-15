@@ -15,6 +15,7 @@ BOOT = BASE / OV.get("boot_file", "boot_state.json")
 DIALOGUE = BASE / OV.get("dialogue_file", "dialogue_state.json")
 FRAME = BASE / OV["reference_frame"]
 HUD_DIR = BASE / "assets" / "ui" / "hud"
+ALERT_DIR = BASE / "assets" / "ui" / "alerts"
 EMOTE_DIR = BASE / "assets" / "cache" / "twitch_emotes"
 
 SRC_W = float(OV.get("source_width", 1672))
@@ -34,6 +35,14 @@ DARK = QColor("#0E1214")
 DARK2 = QColor("#121617")
 FOOTER = QColor("#0A0D0F")
 VOTE_COLORS = [RED, ORANGE, GREEN, BLUE, PURPLE]
+ALERT_CARD_EFFECTS = {
+    "double_votes",
+    "speed_round",
+    "chaos",
+    "anarchy",
+    "reverse_controls",
+    "king_mode",
+}
 
 LABELS = {
     "!up":"UP","!down":"DOWN","!left":"LEFT","!right":"RIGHT",
@@ -63,6 +72,7 @@ class Overlay(QWidget):
         self.sy = self.screen_h / SRC_H
         self.font_family = self.pick_font()
         self.hud = self.load_hud()
+        self.alert_cards = self.load_alert_cards()
         self.emotes = {}
         EMOTE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -105,6 +115,16 @@ class Overlay(QWidget):
                 else:
                     sprites[path.stem] = pix
         return sprites
+
+    def load_alert_cards(self):
+        cards = {}
+        if not ALERT_DIR.exists():
+            return cards
+        for path in ALERT_DIR.glob("*.png"):
+            pix = QPixmap(str(path))
+            if not pix.isNull():
+                cards[path.stem] = pix
+        return cards
 
     def read_json(self, path):
         try:
@@ -392,7 +412,7 @@ class Overlay(QWidget):
                     token_w = emote_size + gap
                     if cursor_x + token_w > max_x:
                         yy += line_h
-                        cursor_x = msg_start_x
+                        cursor_x = x
                         if yy + line_h > bottom:
                             break
                     pix = self.chat_emote(segment.get("provider"), segment.get("id"), segment.get("url"))
@@ -408,7 +428,7 @@ class Overlay(QWidget):
                     token_w, _ = self.screen_text_size(p, token, 12, False)
                     if cursor_x + token_w > max_x and token.strip():
                         yy += line_h
-                        cursor_x = msg_start_x
+                        cursor_x = x
                         if yy + line_h > bottom:
                             break
                         token = token.lstrip()
@@ -616,6 +636,89 @@ class Overlay(QWidget):
         self.text(p, f"{remaining:04.1f}s" if remaining < 10 else f"{remaining:05.1f}s",
                   1190, 184, 104, 20, 11, WHITE, True, Qt.AlignCenter)
 
+    def ease_out_back(self, t):
+        t = max(0.0, min(1.0, float(t))) - 1
+        c1 = 1.70158
+        c3 = c1 + 1
+        return 1 + c3 * t * t * t + c1 * t * t
+
+    def draw_effect_card_alert(self, p, pix, effect, elapsed, dur, intro, outro, alpha):
+        base_w, base_h = 520, 362
+        pop = self.ease_out_back(elapsed / .42)
+        pulse_rate = 3.8 if effect in ("chaos", "anarchy") else 2.2
+        pulse = 1 + math.sin(elapsed * math.pi * pulse_rate) * .012
+        scale = (0.84 + .16 * pop) * pulse * (1 - .04 * outro)
+        w, h = base_w * scale, base_h * scale
+        shake = 0
+        if effect == "chaos":
+            shake = math.sin(elapsed * 42) * 5 + math.sin(elapsed * 21) * 2
+        elif effect == "anarchy":
+            shake = math.sin(elapsed * 34) * 3
+        x = (SRC_W - w) / 2
+        y = 132 + (1 - intro) * -42 + math.sin(elapsed * 3.5) * 2 + shake
+        if outro:
+            y -= 24 * outro
+        target = QRectF(self.tx(x), self.ty(y), self.tw(w), self.th(h))
+
+        p.save()
+        p.setOpacity(max(0.0, min(1.0, alpha / 255)))
+        glow = {
+            "double_votes": QColor(255, 208, 62, 44),
+            "speed_round": QColor(68, 176, 255, 50),
+            "chaos": QColor(202, 38, 30, 54),
+            "anarchy": QColor(255, 83, 18, 52),
+            "reverse_controls": QColor(150, 98, 235, 48),
+            "king_mode": QColor(255, 191, 38, 52),
+        }.get(effect, QColor(255, 83, 18, 42))
+        self.rounded(p, x - 10, y + 12, w + 20, h - 8, glow, QColor(255, 167, 32, 80), 10, 1)
+        p.drawPixmap(target, pix, QRectF(0, 0, pix.width(), pix.height()))
+
+        p.setClipRect(target)
+        shimmer_alpha = int(72 * (alpha / 255) * (.75 + .25 * math.sin(elapsed * 5)))
+        shimmer_speed = 420 if effect == "speed_round" else 260 if effect == "reverse_controls" else 220
+        shimmer_x = x - 180 + ((elapsed * shimmer_speed) % (w + 360))
+        shimmer_color = {
+            "speed_round": QColor(170, 230, 255, shimmer_alpha),
+            "reverse_controls": QColor(210, 180, 255, shimmer_alpha),
+            "chaos": QColor(255, 92, 52, shimmer_alpha),
+        }.get(effect, QColor(255, 236, 124, shimmer_alpha))
+        band = QPolygonF([
+            QPointF(self.tx(shimmer_x), self.ty(y)),
+            QPointF(self.tx(shimmer_x + 58), self.ty(y)),
+            QPointF(self.tx(shimmer_x + 184), self.ty(y + h)),
+            QPointF(self.tx(shimmer_x + 126), self.ty(y + h)),
+        ])
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(shimmer_color))
+        p.drawPolygon(band)
+
+        if effect == "speed_round":
+            p.setPen(QPen(QColor(210, 240, 255, int(alpha * .55)), self.tw(2)))
+            for i in range(9):
+                yy = y + 82 + i * 19 + math.sin(elapsed * 4 + i) * 5
+                xx = x + ((elapsed * 520 + i * 83) % (w + 180)) - 160
+                p.drawLine(QPointF(self.tx(xx), self.ty(yy)), QPointF(self.tx(xx + 130), self.ty(yy - 8)))
+            p.setPen(Qt.NoPen)
+
+        particle_count = 18 if effect in ("king_mode", "anarchy", "chaos") else 12
+        for i in range(particle_count):
+            phase = (elapsed * (.28 + i * .017) + i * .137) % 1
+            sx = x + 36 + ((i * 37) % max(1, int(w - 72)))
+            sy = y + 58 + phase * 168
+            drift = math.sin(elapsed * 2.6 + i) * 9
+            size = 1.6 + (i % 4) * .45
+            if effect == "reverse_controls":
+                color = QColor(172, 126 + (i % 3) * 30, 255, int(alpha * (1 - phase) * .72))
+            elif effect == "speed_round":
+                color = QColor(160, 225, 255, int(alpha * (1 - phase) * .72))
+            elif effect == "double_votes":
+                color = QColor(255, 220 + (i % 2) * 20, 68, int(alpha * (1 - phase) * .76))
+            else:
+                color = QColor(255, 186 + (i % 3) * 20, 48, int(alpha * (1 - phase) * .82))
+            p.setBrush(QBrush(color))
+            p.drawEllipse(QPointF(self.tx(sx + drift), self.ty(sy)), self.tw(size), self.th(size))
+        p.restore()
+
     def draw_alert(self, p):
         if not self.event:
             return
@@ -629,6 +732,14 @@ class Overlay(QWidget):
         outro = max(0, (elapsed - (dur - .4)) / .4)
         alpha = int(255 * intro * (1 - outro))
         bounce = math.sin(min(1, elapsed / .4) * math.pi) * 7
+
+        extra = self.event.get("extra", {})
+        effect = extra.get("effect")
+        if effect in ALERT_CARD_EFFECTS:
+            pix = self.alert_cards.get(f"{effect}_card")
+            if pix:
+                self.draw_effect_card_alert(p, pix, effect, elapsed, dur, intro, outro, alpha)
+                return
 
         w, h = 510, 102
         x, y = 542, 168 + (1 - intro) * -35 + bounce
@@ -644,7 +755,6 @@ class Overlay(QWidget):
         self.pokeball(p, x + 56, y + 51, 26)
         self.text(p, self.event.get("title", ""), x + 104, y + 10, w - 118, 26, 14, title, True)
         self.text(p, self.event.get("subtitle", ""), x + 104, y + 36, w - 118, 30, 9, QColor(25, 25, 25, alpha), True)
-        extra = self.event.get("extra", {})
         if kind == "subscriber":
             kicker = "Votes now count x2!"
         elif extra.get("effect"):

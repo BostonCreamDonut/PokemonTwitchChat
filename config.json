@@ -63,6 +63,12 @@
         "effect": "reverse_controls",
         "duration_seconds": 60,
         "label": "REVERSE CONTROLS"
+      },
+      {
+        "minimum_bits": 5000,
+        "effect": "king_mode",
+        "duration_seconds": 60,
+        "label": "KING MODE"
       }
     ]
   },
