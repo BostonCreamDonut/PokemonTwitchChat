@@ -47,7 +47,6 @@ ALERT_CARD_KINDS = {
     "gift_sub": "gift_sub_card",
     "resub": "resub_card",
 }
-
 LABELS = {
     "!up":"UP","!down":"DOWN","!left":"LEFT","!right":"RIGHT",
     "!a":"A","!b":"B","!l":"L","!r":"R","!start":"START","!select":"SELECT"
@@ -610,35 +609,45 @@ class Overlay(QWidget):
         if not effects:
             return
         self.draw_effect_timer(p, effects[0])
-        x, y, w = 280, 585, 205
-        h = min(125, 42 + 40 * len(effects[:2]))
+        x, y, w = 280, 585, 122
+        h = min(76, 10 + 32 * len(effects[:2]))
         self.rounded(p, x, y, w, h, QColor("#111516", 238), RED, 6, 2)
-        self.text(p, "ACTIVE EFFECTS", x + 8, y + 3, w - 16, 20, 8, CREAM, True, Qt.AlignCenter)
-        yy = y + 28
+        yy = y + 8
         for ef in effects[:2]:
-            self.text(p, "◆", x + 10, yy, 20, 20, 10, GOLD, True, Qt.AlignCenter)
-            self.text(p, ef.get("effect", "").replace("_", " ").upper(), x + 34, yy, w - 44, 16, 8, WHITE, True)
-            self.text(p, f"{float(ef.get('remaining', 0)):.0f}s", x + 34, yy + 15, 50, 14, 8, CREAM, True)
-            yy += 38
+            p.fillRect(QRectF(self.tx(x + 8), self.ty(yy - 2), self.tw(28), self.th(28)), QColor("#111516", 238))
+            effect_id = ef.get("effect", "")
+            icon = self.alert_cards.get(f"{effect_id}_icon")
+            if icon:
+                p.drawPixmap(QRectF(self.tx(x + 9), self.ty(yy - 1), self.tw(26), self.th(26)),
+                             icon, QRectF(0, 0, icon.width(), icon.height()))
+            else:
+                self.text(p, "*", x + 10, yy, 20, 20, 10, GOLD, True, Qt.AlignCenter)
+            self.text(p, f"{float(ef.get('remaining', 0)):.0f}s", x + 42, yy + 1, w - 50, 22, 11, CREAM, True, Qt.AlignVCenter | Qt.AlignLeft)
+            yy += 32
 
     def draw_effect_timer(self, p, effect):
-        label = effect.get("effect", "").replace("_", " ").upper() or "ACTIVE EFFECT"
+        effect_id = effect.get("effect", "")
         remaining = max(0, float(effect.get("remaining", 0)))
-        self.rounded(p, 1150, 155, 168, 58, QColor("#111516", 240), ORANGE, 4, 2)
-        bolt = QPolygonF([
-            QPointF(self.tx(1168), self.ty(164)),
-            QPointF(self.tx(1156), self.ty(186)),
-            QPointF(self.tx(1167), self.ty(184)),
-            QPointF(self.tx(1160), self.ty(205)),
-            QPointF(self.tx(1182), self.ty(176)),
-            QPointF(self.tx(1170), self.ty(178)),
-        ])
-        p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(GOLD))
-        p.drawPolygon(bolt)
-        self.text(p, label, 1190, 164, 104, 19, 8, WHITE, True, Qt.AlignCenter)
+        x, y, w, h = 1170, 155, 140, 58
+        self.rounded(p, x, y, w, h, QColor("#111516", 240), ORANGE, 4, 2)
+        icon = self.alert_cards.get(f"{effect_id}_icon")
+        if icon:
+            p.drawPixmap(QRectF(self.tx(x + 12), self.ty(y + 9), self.tw(40), self.th(40)),
+                         icon, QRectF(0, 0, icon.width(), icon.height()))
+        else:
+            bolt = QPolygonF([
+                QPointF(self.tx(x + 29), self.ty(y + 9)),
+                QPointF(self.tx(x + 17), self.ty(y + 31)),
+                QPointF(self.tx(x + 28), self.ty(y + 29)),
+                QPointF(self.tx(x + 21), self.ty(y + 50)),
+                QPointF(self.tx(x + 43), self.ty(y + 21)),
+                QPointF(self.tx(x + 31), self.ty(y + 23)),
+            ])
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(GOLD))
+            p.drawPolygon(bolt)
         self.text(p, f"{remaining:04.1f}s" if remaining < 10 else f"{remaining:05.1f}s",
-                  1190, 184, 104, 20, 11, WHITE, True, Qt.AlignCenter)
+                  x + 58, y + 16, w - 66, 26, 13, WHITE, True, Qt.AlignVCenter | Qt.AlignLeft)
 
     def ease_out_back(self, t):
         t = max(0.0, min(1.0, float(t))) - 1
