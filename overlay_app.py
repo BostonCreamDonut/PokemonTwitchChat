@@ -617,6 +617,8 @@ class Overlay(QWidget):
         cards = []
         for ef in effects:
             effect_id = ef.get("effect", "")
+            if effect_id not in ALERT_CARD_EFFECTS:
+                continue
             pix = self.alert_cards.get(f"{effect_id}_card")
             if pix and not pix.isNull():
                 remaining = self.effect_remaining(ef)
