@@ -388,7 +388,7 @@ class Overlay(QWidget):
             yy += 24
 
     def draw_chat(self, p):
-        x, y, w, bottom = 1558, 648, 306, 888
+        x, y, w, bottom = 1558, 648, 306, 876
         line_h = 19
         emote_size = 18
         gap = 4
@@ -473,15 +473,16 @@ class Overlay(QWidget):
                 continue
             if bits > 0 and label:
                 parts.append(f"{bits} {label}")
-        return "Bits: " + " | ".join(parts) if parts else ""
+        return " | ".join(parts) if parts else ""
 
     def draw_bits_mode_tip(self, p):
         text = self.bits_mode_text()
         if not text:
             return
-        x, y, w, h = 1558, 894, 306, 24
+        x, y, w, h = 1558, 880, 306, 38
         self.screen_rounded(p, x, y, w, h, QColor(9, 11, 12, 236), QColor("#A56A15"), 5, 1)
-        self.screen_text(p, text, x + 8, y - 1, w - 16, h + 2, 9, GOLD, True, Qt.AlignCenter)
+        self.screen_text(p, "Activate Modes For Bits:", x + 8, y + 2, w - 16, 16, 10, WHITE, True, Qt.AlignCenter)
+        self.screen_text(p, text, x + 8, y + 18, w - 16, 18, 9, GOLD, True, Qt.AlignCenter)
 
     def draw_bottom(self, p):
         st = OV.get("status", {})
