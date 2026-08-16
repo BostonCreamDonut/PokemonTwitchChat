@@ -85,3 +85,21 @@ The broadcaster or a mod can also update it from Twitch chat:
 Create or edit `secrets.env` locally:
 
     TWITCH_ACCESS_TOKEN=your_token_here
+
+## No-money Twitch event tests
+
+Real Twitch Bits require a real cheer, but you can prove the app's Twitch IRC tag path without spending Bits. These commands build fake Twitch IRC `PRIVMSG` / `USERNOTICE` lines, run them through the same parser/callback path as the live bot, and then write the overlay event files:
+
+    python test_twitch_irc_events.py speed
+    python test_twitch_irc_events.py chaos
+    python test_twitch_irc_events.py reverse
+    python test_twitch_irc_events.py king
+    python test_twitch_irc_events.py sub
+    python test_twitch_irc_events.py gift
+    python test_twitch_irc_events.py resub
+
+You can also test a specific fake cheer amount:
+
+    python test_twitch_irc_events.py bits 500
+
+This proves the local IRC parser and event logic. The only thing it cannot prove is Twitch's real payment system sending the tag from their server; that requires an actual cheer.

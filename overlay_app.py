@@ -51,6 +51,12 @@ LABELS = {
     "!up":"UP","!down":"DOWN","!left":"LEFT","!right":"RIGHT",
     "!a":"A","!b":"B","!l":"L","!r":"R","!start":"START","!select":"SELECT"
 }
+EFFECT_SHORT_LABELS = {
+    "speed_round": "Speed",
+    "chaos": "Chaos",
+    "reverse_controls": "Reverse",
+    "king_mode": "King",
+}
 
 class Overlay(QWidget):
     def __init__(self):
@@ -382,7 +388,7 @@ class Overlay(QWidget):
             yy += 24
 
     def draw_chat(self, p):
-        x, y, w, bottom = 1558, 648, 306, 916
+        x, y, w, bottom = 1558, 648, 306, 888
         line_h = 19
         emote_size = 18
         gap = 4
@@ -455,6 +461,27 @@ class Overlay(QWidget):
                     break
 
             yy += line_h + 3
+
+    def bits_mode_text(self):
+        parts = []
+        for rule in CFG.get("events", {}).get("cheer_effects", []):
+            effect = rule.get("effect", "")
+            label = EFFECT_SHORT_LABELS.get(effect, str(rule.get("label", effect)).title())
+            try:
+                bits = int(rule.get("minimum_bits", 0))
+            except (TypeError, ValueError):
+                continue
+            if bits > 0 and label:
+                parts.append(f"{bits} {label}")
+        return "Bits: " + " | ".join(parts) if parts else ""
+
+    def draw_bits_mode_tip(self, p):
+        text = self.bits_mode_text()
+        if not text:
+            return
+        x, y, w, h = 1558, 894, 306, 24
+        self.screen_rounded(p, x, y, w, h, QColor(9, 11, 12, 236), QColor("#A56A15"), 5, 1)
+        self.screen_text(p, text, x + 8, y - 1, w - 16, h + 2, 9, GOLD, True, Qt.AlignCenter)
 
     def draw_bottom(self, p):
         st = OV.get("status", {})
@@ -960,6 +987,7 @@ class Overlay(QWidget):
         self.clear_live_values(p)
         self.draw_votes(p)
         self.draw_chat(p)
+        self.draw_bits_mode_tip(p)
         self.draw_bottom(p)
         self.draw_active_effects(p)
         self.draw_alert(p)
