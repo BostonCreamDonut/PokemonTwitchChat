@@ -16,12 +16,12 @@
     "!select": "BackSpace"
   },
   "input": {
-    "hold_seconds": 0.2,
+    "hold_seconds": 0.1,
     "activate_mgba": false,
     "mgba_window_name": "mGBA"
   },
   "mode": {
-    "vote_window_seconds": 3.0,
+    "vote_window_seconds": 2.0,
     "one_vote_per_user_per_round": true
   },
   "voting": {
