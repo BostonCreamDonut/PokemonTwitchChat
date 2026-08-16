@@ -19,6 +19,7 @@ RED = (104, 20, 12, 255)
 RED_DARK = (73, 11, 7, 255)
 GOLD = (226, 142, 14, 255)
 INNER_RED = (205, 40, 25, 255)
+HOW_TO_PLAY_FILL = (241, 225, 203, 255)
 
 REFERENCE = UI / "reference"
 BADGE_REFERENCE = REFERENCE / "fire_red_badges.png"
@@ -80,6 +81,73 @@ def panel(draw, box, title):
     draw.text((tx, ty), title.upper(), font=f, fill=(255, 248, 232, 255))
 
 
+COMMAND_ICON_CROPS = {
+    "up": (32, 233, 82, 283),
+    "down": (32, 289, 82, 339),
+    "left": (32, 345, 82, 395),
+    "right": (32, 401, 82, 451),
+    "a": (32, 458, 82, 508),
+    "b": (32, 514, 82, 564),
+}
+
+
+def recolor_labeled_button(template, label, fill):
+    button = template.copy()
+    pixels = button.load()
+    for y in range(button.height):
+        for x in range(button.width):
+            r, g, b, a = pixels[x, y]
+            if a == 0:
+                continue
+
+            is_blue_fill = b > 80 and b > r * 1.25 and b > g * 1.15
+            is_old_letter = 15 <= x <= 37 and 9 <= y <= 39 and (
+                (r > 185 and g > 185 and b > 185) or (r < 48 and g < 48 and b < 58)
+            )
+            if is_blue_fill or is_old_letter:
+                shade = max(.45, min(1.25, b / 205)) if is_blue_fill else .9
+                pixels[x, y] = (
+                    int(min(255, fill[0] * shade)),
+                    int(min(255, fill[1] * shade)),
+                    int(min(255, fill[2] * shade)),
+                    a,
+                )
+
+    draw = ImageDraw.Draw(button)
+    # Cover the original B face cleanly while keeping the real border/shadow from the source crop.
+    draw.rounded_rectangle((8, 4, 42, 38), radius=3, fill=fill)
+    f = font(19 if len(label) <= 2 else 15)
+    bbox = draw.textbbox((0, 0), label, font=f, stroke_width=1)
+    tx = 25 - (bbox[2] - bbox[0]) / 2 - bbox[0]
+    ty = 25 - (bbox[3] - bbox[1]) / 2 - bbox[1] - 4
+    draw.text((tx, ty), label, font=f, fill=(255, 248, 232, 255), stroke_width=1, stroke_fill=(0, 0, 0, 210))
+    return button
+
+
+def draw_how_to_play_commands(frame):
+    draw = ImageDraw.Draw(frame)
+    source_buttons = {name: frame.crop(box) for name, box in COMMAND_ICON_CROPS.items()}
+    source_buttons["start"] = recolor_labeled_button(source_buttons["b"], "ST", (112, 78, 176, 255))
+    source_buttons["select"] = recolor_labeled_button(source_buttons["b"], "SEL", (91, 96, 104, 255))
+
+    # Preserve the original How To Play panel art and only repaint the command list.
+    draw.rectangle((25, 225, 296, 568), fill=HOW_TO_PLAY_FILL)
+    commands = [
+        ("up", "!up"), ("down", "!down"),
+        ("left", "!left"), ("right", "!right"),
+        ("a", "!a"), ("b", "!b"),
+        ("start", "!start"), ("select", "!select"),
+    ]
+    text_f = font(21)
+    col_x = [35, 170]
+    row_y = [236, 310, 384, 458]
+    for i, (button, command) in enumerate(commands):
+        cx = col_x[i % 2]
+        cy = row_y[i // 2]
+        frame.alpha_composite(source_buttons[button], (cx, cy))
+        draw.text((cx + 52, cy + 9), command, font=text_f, fill=INK)
+
+
 def make_clean_frame():
     source = UI / "overlay_frame_source.png"
     frame = Image.open(source).convert("RGBA")
@@ -100,6 +168,8 @@ def make_clean_frame():
     # The approved source used a checkerboard placeholder in the game area.
     # Cut the full gameplay aperture to alpha 0 so OBS/mGBA shows through.
     draw.rectangle(GAME_APERTURE, fill=(0, 0, 0, 0))
+
+    draw_how_to_play_commands(frame)
 
     for title, box in BOTTOM_BOXES.items():
         panel(draw, box, title)
