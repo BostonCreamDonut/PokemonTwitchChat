@@ -1,78 +1,57 @@
-# Twitch Panels — Version 6
+# Twitch Panels
 
-## HOW TO PLAY
+Use these images in Twitch's About panel editor:
 
-Control the Pokémon adventure directly from Twitch chat.
+- `assets/twitch_panels/bits_modes_panel.png`
+- `assets/twitch_panels/sub_perks_panel.png`
 
-**Commands**
+## How To Play
+
+Control the Pokemon adventure directly from Twitch chat.
+
+Commands:
 `!up` `!down` `!left` `!right`
 `!a` `!b`
-`!l` `!r`
 `!start` `!select`
 
-Each round lasts about 3 seconds. The command with the highest **weighted vote percentage** executes.
+Commands execute instantly. There is no voting delay.
 
-- Regular viewer = 1 vote
-- Subscriber / Founder = 2 votes
-- One active vote per viewer per round
-- You can change your vote before the round ends
-- Ties go to whichever tied command received support first
+Subscribers and founders get x2 command credit automatically. Gifted subs give that perk to the recipient.
 
----
+## Bits Modes
 
-## WORLD EVENTS
+Temporary gameplay modifiers triggered by Twitch Bits. Active modes appear on the stream overlay with a countdown.
 
-Twitch Bits can temporarily change the rules of the game.
+**250 Bits - Speed Mode**
+Every valid chat command fires twice for 60 seconds.
 
-**250 Bits — Speed Round**
-Voting windows become 1 second for 60 seconds.
+**500 Bits - Chaos Mode**
+Every valid chat command also triggers one random bonus input for 60 seconds.
 
-**500 Bits — Chaos Mode**
-Valid commands execute instantly for 60 seconds.
-
-**1000 Bits — Reverse Controls**
+**1000 Bits - Reverse Controls**
 Up/Down and Left/Right are swapped for 60 seconds.
 
-**2000 Bits — King Mode**
-One viewer controls the game for 60 seconds.
+**2000 Bits - King Mode**
+The donor is the only viewer whose commands control the game for 60 seconds.
 
-Active effects are always shown on the stream overlay with a countdown.
+## Sub Perks
 
----
+**Subscriber**
+Commands count x2.
 
-## ADVENTURE LOG
+**Gifted Sub**
+The recipient gets x2 command credit.
 
-This panel can later be connected to Pokémon Emerald game-memory tracking.
-
-Planned automatic stats:
-- Current location
-- Badges
-- Current party
-- Deaths / wipes
-- Play time
-- Current objective
-- Hall of Fame completions
-
-For v6, these stats are intentionally removed from the permanent overlay to keep gameplay large.
-
----
+**Resub**
+Triggers a welcome-back alert on stream.
 
 ## FAQ
 
 **Why didn't my command execute?**
-The stream uses democracy voting. Only the command with the highest weighted percentage executes when the timer ends.
+Make sure the command is one of the supported commands shown above. During King Mode, only the king's commands control the game.
 
 **Do subscribers control the game more?**
-Subscribers receive a small perk: their vote counts as 2 instead of 1. Gifted subs give that perk to the recipient. They still only have one active vote per round.
+Subscribers receive x2 command credit for stream stats/challenges. Commands still execute instantly.
 
-**Can I change my vote?**
-Yes. Enter another valid command before the voting timer ends.
-
-**What does the star beside a username mean?**
-That viewer is a subscriber and their vote carries the subscriber multiplier.
-
-**What are World Events?**
+**What are Bits Modes?**
 Temporary gameplay modifiers triggered by Twitch Bits. The current effect and remaining time appear on the overlay.
-
-**Does donating let one viewer directly control the game?**
-No. Events affect the community/game rules rather than giving one donor permanent control.

@@ -313,7 +313,7 @@ class Overlay(QWidget):
     def clear_live_values(self, p):
         p.setPen(Qt.NoPen)
 
-        # Current Round body (below header)
+        # Command Activity body (below header)
         p.setBrush(CREAM2)
         p.drawRect(QRectF(1549, 219, 358, 356))
 
@@ -338,12 +338,11 @@ class Overlay(QWidget):
 
     def draw_votes(self, p):
         rows = self.state.get("votes", [])[:5]
-        progress = max(0.0, min(1.0, float(self.state.get("round_progress", 0.0))))
 
         if not rows:
-            self.screen_text(p, "Waiting for votes...", 1564, 355, 310, 24, 14, QColor("#68645D"), False, Qt.AlignCenter)
+            self.screen_text(p, "Waiting for commands...", 1564, 355, 310, 24, 14, QColor("#68645D"), False, Qt.AlignCenter)
 
-        yy = 250
+        yy = 232
         for i, row in enumerate(rows):
             pct = float(row.get("percent", 0))
             wt = int(row.get("weighted_votes", 0))
@@ -364,12 +363,8 @@ class Overlay(QWidget):
             self.screen_text(p, f"({wt})", 1817, yy + 17, 70, 16, 13, INK, True, Qt.AlignRight | Qt.AlignVCenter)
             yy += 58
 
-        self.screen_text(p, f"Total Votes: {int(self.state.get('round_weighted_vote_count', 0))}",
+        self.screen_text(p, f"Commands: {int(self.state.get('round_weighted_vote_count', 0))}",
                          1575, 542, 310, 24, 14, INK, True, Qt.AlignCenter)
-
-        self.screen_rounded(p, 1588, 224, 274, 14, QColor("#321913"), QColor("#8E261B"), 4, 1)
-        if progress > 0:
-            self.screen_rounded(p, 1589, 225, max(4, 272 * progress), 12, GOLD, GOLD, 3, 0)
 
     def draw_chat_legacy(self, p):
         yy = 555

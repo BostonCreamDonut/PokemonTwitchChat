@@ -8,7 +8,7 @@ This version implements the latest approved overlay art into the project.
 - The **game window is genuinely transparent** so OBS can place mGBA under it.
 - No permanent Professor Oak / NPC dialogue box.
 - No permanent Trainer Status box.
-- Current Round, Live Chat, bottom HUD, and footer are aligned to the approved image.
+- Command Activity, Live Chat, bottom HUD, and footer are aligned to the approved image.
 
 ## OBS setup
 Use a 1920x1080 base canvas.

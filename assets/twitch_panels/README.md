@@ -1,6 +1,6 @@
 # Twitch Panels
 
-Upload these images in Twitch's **About** panel editor.
+Upload these images in Twitch's About panel editor.
 
 ## Bits Modes
 
@@ -11,11 +11,11 @@ Description:
 ```md
 Trigger stream effects with Bits:
 
-250 Bits - Speed Round
-Voting windows become 1 second for 60 seconds.
+250 Bits - Speed Mode
+Every command fires twice for 60 seconds.
 
 500 Bits - Chaos Mode
-Valid commands execute instantly for 60 seconds.
+Commands also trigger random bonus inputs for 60 seconds.
 
 1000 Bits - Reverse Controls
 Up/Down and Left/Right are swapped for 60 seconds.
@@ -31,9 +31,9 @@ Image: `sub_perks_panel.png`
 Description:
 
 ```md
-Subscribers get x2 vote weight automatically.
+Subscribers get x2 command credit automatically.
 
-Gifted subs give the x2 vote perk to the recipient.
+Gifted subs give x2 command credit to the recipient.
 
 Resubs trigger a welcome-back alert on stream.
 ```

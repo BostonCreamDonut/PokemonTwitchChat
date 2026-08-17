@@ -165,6 +165,21 @@ def draw_how_to_play_commands(frame):
             draw.text((88, y + 27), line2, font=rule_f, fill=INK)
 
 
+def draw_command_activity_header(frame):
+    draw = ImageDraw.Draw(frame)
+    title = "COMMAND ACTIVITY"
+    # Preserve the original right-panel header frame and Pokeballs; replace only the title text.
+    draw.rectangle((1615, 176, 1848, 208), fill=(14, 18, 20, 255))
+    title_f = font(24)
+    bbox = draw.textbbox((0, 0), title, font=title_f)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    tx = 1548 + (366 - tw) / 2 - bbox[0]
+    ty = 171 + (44 - th) / 2 - bbox[1]
+    draw.text((tx + 2, ty + 2), title, font=title_f, fill=(0, 0, 0, 190))
+    draw.text((tx, ty), title, font=title_f, fill=(255, 248, 232, 255))
+
+
 def make_clean_frame():
     source = UI / "overlay_frame_source.png"
     frame = Image.open(source).convert("RGBA")
@@ -187,6 +202,7 @@ def make_clean_frame():
     draw.rectangle(GAME_APERTURE, fill=(0, 0, 0, 0))
 
     draw_how_to_play_commands(frame)
+    draw_command_activity_header(frame)
 
     for title, box in BOTTOM_BOXES.items():
         panel(draw, box, title)
