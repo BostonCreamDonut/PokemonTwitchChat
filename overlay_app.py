@@ -823,8 +823,8 @@ class Overlay(QWidget):
 
     def draw_effect_card_text(self, p, x, y, w, h, effect):
         copy = {
-            "speed_round": ("SPEED ROUND!", "Voting time reduced to 1 sec!"),
-            "chaos": ("CHAOS MODE!", "All commands execute instantly!"),
+            "speed_round": ("SPEED MODE!", "Commands fire twice!"),
+            "chaos": ("CHAOS MODE!", "Random bonus inputs!"),
             "reverse_controls": ("REVERSE CONTROLS!", "Up <-> Down   Left <-> Right"),
             "king_mode": ("KING MODE!", "Only the king controls the game!"),
         }.get(effect, (str(effect).replace("_", " ").upper(), "World event active!"))

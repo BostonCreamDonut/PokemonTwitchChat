@@ -125,7 +125,7 @@ MENU = {
     "1": ("subscriber", "NEW TRAINER JOINED!", "TestTrainer subscribed - votes count x2", {"user": "TestTrainer"}, 5),
     "2": ("gift_sub", "A POKE BALL WAS GIFTED!", "TestTrainer gifted a sub to LuckyViewer", {"user": "TestTrainer", "recipient": "LuckyViewer"}, 6),
     "3": ("resub", "WELCOME BACK!", "TestTrainer resubscribed for 6 months", {"user": "TestTrainer", "months": 6}, 5),
-    "4": ("world_event", "SPEED ROUND", "TestTrainer used 250 Bits - SPEED ROUND for 60s", {"bits": 250, "effect": "speed_round"}, 5),
+    "4": ("world_event", "SPEED MODE", "TestTrainer used 250 Bits - SPEED MODE for 60s", {"bits": 250, "effect": "speed_round"}, 5),
     "5": ("world_event", "CHAOS MODE", "TestTrainer used 500 Bits - CHAOS MODE for 60s", {"bits": 500, "effect": "chaos"}, 5),
     "6": ("world_event", "REVERSE CONTROLS", "TestTrainer used 1,000 Bits - REVERSE CONTROLS for 60s", {"bits": 1000, "effect": "reverse_controls"}, 5),
     "7": ("world_event", "KING MODE", "TestTrainer used 2,000 Bits - KING MODE for 60s", {"bits": 2000, "effect": "king_mode"}, 5),

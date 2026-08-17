@@ -38,7 +38,7 @@
         "minimum_bits": 250,
         "effect": "speed_round",
         "duration_seconds": 60,
-        "label": "SPEED ROUND"
+        "label": "SPEED MODE"
       },
       {
         "minimum_bits": 500,
@@ -185,19 +185,19 @@
   "gym_challenges": [
     {
       "name": "ROUTE RUSH",
-      "description": "Cast 75 weighted votes before time runs out!",
+      "description": "Send 75 weighted commands before time runs out!",
       "target": 75,
       "metric": "weighted_votes",
-      "reward": "SPEED ROUND",
+      "reward": "SPEED MODE",
       "reward_effect": "speed_round",
       "reward_seconds": 20
     },
     {
       "name": "TRAINER SWARM",
-      "description": "Get 20 unique trainers voting!",
+      "description": "Get 20 unique trainers commanding!",
       "target": 20,
       "metric": "unique_voters",
-      "reward": "SPEED ROUND",
+      "reward": "SPEED MODE",
       "reward_effect": "speed_round",
       "reward_seconds": 20
     }

@@ -147,6 +147,23 @@ def draw_how_to_play_commands(frame):
         frame.alpha_composite(source_buttons[button], (cx, cy))
         draw.text((cx + 52, cy + 9), command, font=text_f, fill=INK)
 
+    # Update rule copy for instant-control mode while preserving the original stars/dividers.
+    rule_f = font(21)
+    draw.rectangle((82, 602, 296, 806), fill=HOW_TO_PLAY_FILL)
+    rules = [
+        ("Commands", "fire instantly!"),
+        ("Subscribers", "get x2 credit!"),
+        ("Bits activate", "special modes!"),
+    ]
+    for y, (line1, line2) in zip((610, 682, 754), rules):
+        draw.text((88, y), line1, font=rule_f, fill=INK)
+        if "x2" in line2:
+            draw.text((88, y + 27), "get ", font=rule_f, fill=INK)
+            draw.text((132, y + 27), "x2", font=rule_f, fill=INNER_RED)
+            draw.text((162, y + 27), "credit!", font=rule_f, fill=INK)
+        else:
+            draw.text((88, y + 27), line2, font=rule_f, fill=INK)
+
 
 def make_clean_frame():
     source = UI / "overlay_frame_source.png"

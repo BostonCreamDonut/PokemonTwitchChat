@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, logging, random, re, signal, subprocess, sys, threading, time, urllib.error, urllib.request
+import json, logging, queue, random, re, signal, subprocess, sys, threading, time, urllib.error, urllib.request
 from collections import Counter
 from pathlib import Path
 
@@ -141,6 +141,7 @@ class App:
         self.votes=Counter(); self.raw=Counter(); self.user_votes={}; self.order={}; self.seq=0
         self.recent=[]; self.chat_log=[]; self.last_winner=None; self.total_votes=0; self.total_weighted=0
         self.players=set(); self.rounds=0; self.effects={}
+        self.input_queue=queue.Queue()
         self.third_party_emotes={}
         self.third_party_emote_loads=set()
 
@@ -159,6 +160,29 @@ class App:
             self.on_message,self.on_notice,STOP
         )
         self.start_third_party_emote_load()
+        threading.Thread(target=self.input_worker,daemon=True).start()
+
+    def input_worker(self):
+        while not STOP.is_set():
+            try:
+                key=self.input_queue.get(timeout=.1)
+            except queue.Empty:
+                continue
+            try:
+                self.controller.press(key)
+            finally:
+                self.input_queue.task_done()
+
+    def queue_press(self,key):
+        self.input_queue.put(key)
+
+    def execute_command(self,cmd):
+        self.queue_press(self.mapped_key(cmd))
+        if self.effect_active("speed_round"):
+            self.queue_press(self.mapped_key(cmd))
+        if self.effect_active("chaos"):
+            extra=random.choice(list(self.controls))
+            self.queue_press(self.mapped_key(extra))
 
     def boot_sequence(self):
         if not CFG["stream_system"].get("show_boot_sequence",True):
@@ -199,7 +223,7 @@ class App:
 
     def activate_effect(self,effect,duration,user="",amount=0):
         self.effects[effect]={"end":time.monotonic()+duration,"source":user,"amount":amount}
-        labels={"speed_round":"SPEED ROUND","chaos":"CHAOS MODE",
+        labels={"speed_round":"SPEED MODE","chaos":"CHAOS MODE",
                 "reverse_controls":"REVERSE CONTROLS",
                 "king_mode":"KING MODE"}
         sound={"speed_round":"speed_round.wav",
@@ -219,8 +243,8 @@ class App:
                 self.clear_round_votes()
                 self.round_end=time.monotonic()+self.base_window
         dialogue={
-            "speed_round":("Bike Shop","Hold on tight! Voting just got a whole lot faster!"),
-            "chaos":("Team Rocket","Prepare for trouble! Every command goes through right now!"),
+            "speed_round":("Bike Shop","Hold on tight! Every command fires twice!"),
+            "chaos":("Team Rocket","Prepare for trouble! Random bonus inputs are flying!"),
             "reverse_controls":("Psychic Trainer","Your sense of direction feels... backwards."),
             "king_mode":("Elite Trainer",f"{user} is king now. Hold on tight!")
         }.get(effect)
@@ -400,31 +424,22 @@ class App:
             if user.lower()==king_owner:
                 w=self.weight(tags)
                 self.db.record_vote(user,w,CFG["stream_system"]["trainer_xp_per_vote"])
-                self.controller.press(self.mapped_key(cmd))
+                self.execute_command(cmd)
                 with self.lock:
+                    self.user_votes[user.lower()]={"command":cmd,"weight":w}
+                    self.votes[cmd]+=w; self.raw[cmd]+=1
+                    self.seq+=1; self.order.setdefault(cmd,self.seq)
+                    self.total_votes+=1; self.total_weighted+=w; self.players.add(user.lower())
                     self.recent.append({"username":user,"command":cmd,"subscriber":is_sub(tags),"weight":w})
                     self.recent=self.recent[-30:]
             return
 
         w=self.weight(tags)
         self.db.record_vote(user,w,CFG["stream_system"]["trainer_xp_per_vote"])
-
-        if self.effect_active("chaos"):
-            self.controller.press(self.mapped_key(cmd))
-            with self.lock:
-                self.recent.append({"username":user,"command":cmd,"subscriber":is_sub(tags),"weight":w})
-                self.recent=self.recent[-30:]
-            return
+        self.execute_command(cmd)
 
         u=user.lower()
         with self.lock:
-            if u in self.user_votes:
-                old=self.user_votes[u]
-                if old["command"]==cmd:return
-                self.votes[old["command"]]-=old["weight"]; self.raw[old["command"]]-=1
-                if self.votes[old["command"]]<=0:self.votes.pop(old["command"],None)
-                if self.raw[old["command"]]<=0:self.raw.pop(old["command"],None)
-
             self.user_votes[u]={"command":cmd,"weight":w}
             self.votes[cmd]+=w; self.raw[cmd]+=1
             self.seq+=1; self.order.setdefault(cmd,self.seq)
@@ -487,7 +502,7 @@ class App:
                     self.round_end=time.monotonic()+self.base_window
                 STOP.wait(.05)
                 continue
-            desired=1.0 if self.effect_active("speed_round") else self.base_window
+            desired=self.base_window
             if desired!=self.vote_window:
                 self.vote_window=desired; self.round_end=time.monotonic()+desired
             if time.monotonic()<self.round_end:
@@ -500,8 +515,6 @@ class App:
                     self.rounds+=1
                 self.votes=Counter(); self.raw=Counter(); self.user_votes={}; self.order={}; self.seq=0
                 self.round_end=time.monotonic()+self.vote_window
-            if winner:
-                self.controller.press(self.mapped_key(winner))
 
     def gym_worker(self):
         ss=CFG["stream_system"]
